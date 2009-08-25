@@ -1041,7 +1041,7 @@
 					// COLLADAMax NextGen;  Version: 1.1.0;  Platform: Win32;  Configuration: Release Max2009
 					// issue#1 : missing channel.@id -> use automatic id instead
 					Debug.trace(" ! COLLADAMax2009 id : _"+_channel_id);
-					channelLibrary.addChannel("_"+String(_channel_id), channel);
+					channelLibrary.addChannel("_"+String(_channel_id++), channel);
 				}
 			}
 
@@ -1056,9 +1056,8 @@
 					channelLibrary.addChannel(channel.@id, channel);
 				}else{
 					Debug.trace(" ! C4D id : _"+_channel_id);
-					channelLibrary.addChannel("_"+String(_channel_id), channel);
+					channelLibrary.addChannel("_"+String(_channel_id++), channel);
 				}
-				++_channel_id;
 			}
 					
 			if (clips) {
