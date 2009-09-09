@@ -4,7 +4,7 @@ package away3d.audio
 	import away3d.audio.drivers.ISound3DDriver;
 	import away3d.audio.drivers.SimplePanVolumeDriver;
 	import away3d.core.base.Object3D;
-	import away3d.core.math.MatrixAway3D;
+	import away3d.core.math.Matrix3D;
 	import away3d.core.math.Number3D;
 	import away3d.events.Object3DEvent;
 	
@@ -26,7 +26,7 @@ package away3d.audio
 	public class Sound3D extends Object3D
 	{
 		private var _refv : Number3D;
-		private var _inv_ref_mtx : MatrixAway3D;
+		private var _inv_ref_mtx : Matrix3D;
 		private var _driver : ISound3DDriver;
 		private var _reference : Object3D;
 		private var _sound : Sound;
@@ -58,7 +58,7 @@ package away3d.audio
 			trace(_driver);
 			
 			_refv = new Number3D;
-			_inv_ref_mtx = new MatrixAway3D;
+			_inv_ref_mtx = new Matrix3D;
 			
 			this.addEventListener(Object3DEvent.SCENE_CHANGED, _onSceneChanged);
 		}
