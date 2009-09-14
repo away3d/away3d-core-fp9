@@ -102,6 +102,7 @@ package away3d.overlays
 						
 			if(useBurning && _burnClip)
 			{
+				var ctVal:Number;
 				if(_burnMethod == LensFlare.BURN_METHOD_BRIGHTNESS)
 				{
 					var bsVal:Number = 5*burnFactor/_projectionLength;
@@ -109,13 +110,13 @@ package away3d.overlays
 					bsVal = bsVal > 3 ? 3 : bsVal;
 					//TweenMax.to(_burnClip, 0, {colorMatrixFilter:{contrast:bsVal, brightness:bsVal}});
 					//TODO: setup colorMatrixFilter tween without TweenMax
-					var ctVal:Number = 500*burnFactor/_projectionLength;
+					ctVal = 500*burnFactor/_projectionLength;
 					_ct = new ColorTransform(1, 1, 1, 1, ctVal, ctVal, ctVal, 0);
 					_burnClip.transform.colorTransform = _ct;
 				}
 				else if(_burnMethod == LensFlare.BURN_METHOD_COLOR_TRANSFORM)
 				{
-					var ctVal:Number = 500*burnFactor/_projectionLength;
+					ctVal = 500*burnFactor/_projectionLength;
 					_ct = new ColorTransform(1, 1, 1, 1, ctVal, ctVal, ctVal, 0);
 					_burnClip.transform.colorTransform = _ct;
 				}
