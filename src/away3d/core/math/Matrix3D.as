@@ -545,9 +545,7 @@ package away3d.core.math
     	 */
         public function scaleMatrix(u:Number, v:Number, w:Number):void
         {
-        	tx = sxy = sxz = 0;
-        	syz = ty = syz = 0;
-        	szx = szy = tz = 0;
+        	tx = sxy = sxz = syx = ty = syz = szx = szy = tz = 0;
         	
             sxx = u;
             syy = v;
@@ -558,7 +556,7 @@ package away3d.core.math
     	 */
         public function clear():void
         {
-        	tx = sxy = sxz = syz = ty = syz = szx = szy = tz = 0;
+        	tx = sxy = sxz = syx = ty = syz = szx = szy = tz = 0;
             sxx = syy = szz = 1;
         }
         
