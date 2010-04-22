@@ -1,5 +1,6 @@
 package away3d.core.project
 {
+	import away3d.arcane;
 	import away3d.cameras.lenses.*;
 	import away3d.containers.*;
 	import away3d.core.base.*;
@@ -11,6 +12,8 @@ package away3d.core.project
 	import flash.display.*;
 	import flash.utils.*;
 	
+	use namespace arcane;
+	
 	public class DirSpriteProjector implements IPrimitiveProvider
 	{
 		private var _view:View3D;
@@ -18,7 +21,7 @@ package away3d.core.project
 		private var _dirsprite:DirSprite2D;
 		private var _vertices:Array;
 		private var _bitmaps:Dictionary;
-		private var _lens:ILens;
+		private var _lens:AbstractLens;
 		private var _screenVertices:Array;
 		private var _centerScreenVertices:Array = new Array();
 		private var _index:int;

@@ -125,9 +125,9 @@ package away3d.containers
         private var screenX:Number;
         private var screenY:Number;
         private var screenZ:Number = Infinity;
-        private var element:Object;
+        private var element:Element;
         private var drawpri:DrawPrimitive;
-        private var material:IMaterial;
+        private var material:Material;
         private var object:Object3D;
         private var uv:UV;
         private var sceneX:Number;
@@ -194,10 +194,11 @@ package away3d.containers
                     {
                         var tri:DrawTriangle = pri as DrawTriangle;
                         var testuv:UV = tri.getUV(screenX, screenY);
-                        if (tri.material is IUVMaterial) {
-                            var testmaterial:IUVMaterial = (tri.material as IUVMaterial);
+                        if (tri.material is BitmapMaterial) {
+                            var testmaterial:BitmapMaterial = (tri.material as BitmapMaterial);
                             //return if material pixel is transparent
-                            if (!(tri.material is BitmapMaterialContainer) && !(testmaterial.getPixel32(testuv.u, testuv.v) >> 24))
+                            //TODO: sort out eventuality for composite materials
+                            if (!(testmaterial.getPixel32(testuv.u, testuv.v) >> 24) && !(testmaterial is CompositeMaterial))
                                 return;
                             uv = testuv;
                         }
@@ -359,7 +360,7 @@ package away3d.containers
         /**
          * A container for 2D overlays positioned over the rendered scene.
          */
-        public var hud:Sprite = new Sprite();
+        public var foreground:Sprite = new Sprite();
 		
         /**
          * Enables/Disables stats panel.
@@ -405,7 +406,7 @@ package away3d.containers
         /**
          * Current material under the mouse.
          */
-        public var mouseMaterial:IMaterial;
+        public var mouseMaterial:Material;
         
         /**
          * Defines whether the view always redraws on a render, or just redraws what 3d objects change. Defaults to false.
@@ -600,7 +601,7 @@ package away3d.containers
             addChild(_session.getContainer(this));
             addChild(_interactiveLayer);
             addChild(overlay);
-            addChild(hud);
+            addChild(foreground);
         }
         
         public function get screenClipping():Clipping
@@ -790,7 +791,7 @@ package away3d.containers
         	if (!session || !_mouseIsOverView)
         		return;
         	
-        	var screenPoint:Point = new Point(x, y);
+            var screenPoint:Point = new Point(x, y);
         	var stagePoint:Point = localToGlobal(screenPoint);
             _hitPointX = stagePoint.x;
             _hitPointY = stagePoint.y;

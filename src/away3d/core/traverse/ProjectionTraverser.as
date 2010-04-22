@@ -7,6 +7,7 @@ package away3d.core.traverse
 	import away3d.core.base.*;
 	import away3d.core.clip.*;
 	import away3d.core.geom.*;
+	import away3d.graphs.bsp.BSPTree;
 	import away3d.core.math.*;
 	import away3d.core.project.*;
 	import away3d.core.utils.*;
@@ -22,7 +23,7 @@ package away3d.core.traverse
         private var _frustum:Frustum;
         private var _cameraVarsStore:CameraVarsStore;
         private var _camera:Camera3D;
-        private var _lens:ILens;
+        private var _lens:AbstractLens;
         private var _clipping:Clipping;
         private var _cameraViewMatrix:Matrix3D;
         private var _viewTransform:Matrix3D;
@@ -68,27 +69,37 @@ package away3d.core.traverse
             _viewTransform = _cameraVarsStore.createViewTransform(node);
             _viewTransform.multiply(_cameraViewMatrix, node.sceneTransform);
             
-            if (_clipping.objectCulling) {
-	        	_frustum = _lens.getFrustum(node, _viewTransform);
-	        	
-	            if ((node is Scene3D || _cameraVarsStore.nodeClassificationDictionary[node.parent] == Frustum.INTERSECT)) {
-	            	if (node.pivotZero)
-	            		_nodeClassification = _cameraVarsStore.nodeClassificationDictionary[node] = _frustum.classifyRadius(node.boundingRadius);
-	            	else
-	            		_nodeClassification = _cameraVarsStore.nodeClassificationDictionary[node] = _frustum.classifySphere(node.pivotPoint, node.boundingRadius);
-	            } else {
-	            	_nodeClassification = _cameraVarsStore.nodeClassificationDictionary[node] = _cameraVarsStore.nodeClassificationDictionary[node.parent];
-	            }
-	            
-	            if (_nodeClassification == Frustum.OUT) {
-	            	node.updateObject();
-	            	return false;
-	            }
+            if (node is BSPTree) {
+            	BSPTree(node).update(_view.camera, _lens.getFrustum(node, _viewTransform), _cameraVarsStore);
+            	_cameraVarsStore.nodeClassificationDictionary[node] = Frustum.INTERSECT;
+			}
+            // only check culling if not pre-culled by a scene graph
+            else if (_clipping.objectCulling) {
+            	if (node._preCulled) {
+            		_cameraVarsStore.nodeClassificationDictionary[node] = node._preCullClassification;
+            		return true;
+            	}
+            	else {
+		        	_frustum = _lens.getFrustum(node, _viewTransform);
+		        	
+		            if ((node is Scene3D || _cameraVarsStore.nodeClassificationDictionary[node.parent] == Frustum.INTERSECT)) {
+		            	if (node.pivotZero)
+		            		_nodeClassification = _cameraVarsStore.nodeClassificationDictionary[node] = _frustum.classifyRadius(node.boundingRadius);
+		            	else
+		            		_nodeClassification = _cameraVarsStore.nodeClassificationDictionary[node] = _frustum.classifySphere(node.pivotPoint, node.boundingRadius);
+		            } else {
+		            	_nodeClassification = _cameraVarsStore.nodeClassificationDictionary[node] = _cameraVarsStore.nodeClassificationDictionary[node.parent];
+		            }
+		            if (_nodeClassification == Frustum.OUT) {
+		            	node.updateObject();
+		            	return false;
+		            }
+            	}
+            	
+            	//check which LODObject is visible
+	            if (node is ILODObject)
+	                return (node as ILODObject).matchLOD(_camera);
             }
-            
-            //check which LODObject is visible
-            if (node is ILODObject)
-                return (node as ILODObject).matchLOD(_camera);
             
             return true;
         }

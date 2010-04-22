@@ -63,7 +63,7 @@
             return _uv;
 		}
 		/** @private */
-		arcane function createFace(v0:Vertex, v1:Vertex, v2:Vertex, material:ITriangleMaterial = null, uv0:UV = null, uv1:UV = null, uv2:UV = null):Face
+		arcane function createFace(v0:Vertex, v1:Vertex, v2:Vertex, material:Material = null, uv0:UV = null, uv1:UV = null, uv2:UV = null):Face
 		{
 			if (_faceStore.length) {
             	_faceActive.push(_face = _faceStore.pop());
@@ -80,7 +80,7 @@
             return _face;
 		}
 		/** @private */
-		arcane function createSegment(v0:Vertex, v1:Vertex, material:ISegmentMaterial = null):Segment
+		arcane function createSegment(v0:Vertex, v1:Vertex, material:Material = null):Segment
 		{
 			if (_segmentStore.length) {
             	_segmentActive.push(_segment = _segmentStore.pop());
@@ -125,17 +125,20 @@
     			
     		//clear vertex objects
     		_vStore = _vStore.concat(_vActive);
-        	_vActive = [];    		
+        	_vActive = [];
+    		
     		//clear uv objects
     		_uvStore = _uvStore.concat(_uvActive);
-        	_uvActive = [];        	
+        	_uvActive = [];
+        	
         	//clear face objects
     		_faceStore = _faceStore.concat(_faceActive);
         	_faceActive = [];
         	
         	//clear segment objects
     		_segmentStore = _segmentStore.concat(_segmentActive);
-        	_segmentActive = [];    	}
+        	_segmentActive = [];
+    	}
         
 		/**
 		 * @inheritDoc
@@ -173,12 +176,12 @@
 		/**
 		 * @inheritDoc
 		 */
-        public override function get billboards():Array
+        public override function get sprites():Array
         {
     		if (_primitiveDirty)
     			updatePrimitive();
     		
-            return _geometry.billboards;
+            return _geometry.sprites;
         }
         
 		/**

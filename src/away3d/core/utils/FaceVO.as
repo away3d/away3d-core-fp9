@@ -3,8 +3,6 @@ package away3d.core.utils
 	import away3d.core.base.*;
 	import away3d.materials.*;
 	
-	import flash.geom.*;
-	
 	public class FaceVO
 	{
 		public var generated:Boolean;
@@ -25,13 +23,11 @@ package away3d.core.utils
 		
         public var uv2:UV;
 		
-		public var material:ITriangleMaterial;
+		public var material:Material;
 		
-		public var back:ITriangleMaterial;
+		public var back:Material;
 		
 		public var face:Face;
-		
-		public var bitmapRect:Rectangle;
 		
 		public var reverseArea:Boolean;
 		        

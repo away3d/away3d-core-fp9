@@ -2,7 +2,8 @@ package away3d.core.draw
 {
     import away3d.arcane;
     import away3d.core.base.*;
-    import away3d.core.utils.FaceVO;
+    import away3d.core.geom.*;
+    import away3d.core.utils.*;
     import away3d.materials.*;
     
     import flash.geom.Matrix;
@@ -219,7 +220,7 @@ package away3d.core.draw
     	/**
     	 * The material object used as the triangle primitive's texture.
     	 */
-        public var material:ITriangleMaterial;
+        public var material:Material;
         
         public var screenVertices:Array;
         
@@ -257,7 +258,7 @@ package away3d.core.draw
         /**
         * Calculates from the uv coordinates the mapping matrix required to draw the triangle primitive.
         */
-        public final function transformUV(material:IUVMaterial):Matrix
+        public final function transformUV(material:LayerMaterial):Matrix
         {
             materialWidth = material.width,
             materialHeight = material.height;
@@ -302,9 +303,9 @@ package away3d.core.draw
         	_invtexmapping.c = _u2 - _u0;
         	_invtexmapping.d = _v2 - _v0;
         	
-            if (material is BitmapMaterialContainer) {
-            	_invtexmapping.tx = _u0 - faceVO.bitmapRect.x;
-            	_invtexmapping.ty = _v0 - faceVO.bitmapRect.y;
+            if (material is CompositeMaterial && (material as CompositeMaterial).surfaceCache) {
+            	_invtexmapping.tx = _u0 - faceVO.face.bitmapRect.x;
+            	_invtexmapping.ty = _v0 - faceVO.face.bitmapRect.y;
             } else {
             	_invtexmapping.tx = _u0;
             	_invtexmapping.ty = _v0;
@@ -496,7 +497,7 @@ package away3d.core.draw
         		var iIndex:int;
         		var jIndex:int;
 				while (i < endIndex) {
-					if (screenCommands[i] == DrawingCommand.CURVE)
+					if (screenCommands[i] == PathCommand.CURVE)
 						i++;
 					
 					if ((((vertiy = screenVertices[(iIndex = screenIndices[i]*3)+1]) > y) != ((vertjy = screenVertices[(jIndex = screenIndices[j]*3)+1]) > y)) && (x < ((vertjx = screenVertices[jIndex]) - (vertix = screenVertices[iIndex]))*(y - vertiy)/(vertjy - vertiy) + vertix))
@@ -504,7 +505,7 @@ package away3d.core.draw
 					
 					j = i++;
 					
-					if (screenCommands[i] == DrawingCommand.MOVE)
+					if (screenCommands[i] == PathCommand.MOVE)
 						j = i++;
 				}
 				return c;

@@ -1,7 +1,8 @@
 package away3d.materials.shaders
 {
-	import away3d.containers.*;
 	import away3d.arcane;
+	import away3d.cameras.lenses.*;
+	import away3d.containers.*;
 	import away3d.core.base.*;
 	import away3d.core.draw.*;
 	import away3d.core.light.*;
@@ -22,14 +23,8 @@ package away3d.materials.shaders
 	 * Base class for shaders.
     * Not intended for direct use - use one of the shading materials in the materials package.
     */
-    public class AbstractShader extends EventDispatcher implements ILayerMaterial
+    public class AbstractShader extends LayerMaterial
     {
-    	/** @private */
-        arcane var _id:int;
-        /** @private */
-        arcane var _materialDirty:Boolean;
-        /** @private */
-		arcane var _materialupdated:MaterialEvent;
         /** @private */
         arcane var _faceDictionary:Dictionary = new Dictionary(true);
         /** @private */
@@ -89,20 +84,9 @@ package away3d.materials.shaders
         /** @private */
 		arcane var _normal2:Number3D = new Number3D();
         /** @private */
-		arcane var _mapping:Matrix = new Matrix();
+		arcane var _map:Matrix = new Matrix();
 		/** @private */
-        arcane function notifyMaterialUpdate():void
-        {
-        	_materialDirty = false;
-        	
-            if (!hasEventListener(MaterialEvent.MATERIAL_UPDATED))
-                return;
-			
-            if (_materialupdated == null)
-                _materialupdated = new MaterialEvent(MaterialEvent.MATERIAL_UPDATED, this);
-                
-            dispatchEvent(_materialupdated);
-        }
+		arcane var _mapping:Matrix;
         /** @private */
 		arcane final function contains(v0x:Number, v0y:Number, v1x:Number, v1y:Number, v2x:Number, v2y:Number, x:Number, y:Number):Boolean
         {   
@@ -117,82 +101,8 @@ package away3d.materials.shaders
 
             return true;
         }
-        
-        /**
-        * Instance of the Init object used to hold and parse default property values
-        * specified by the initialiser object in the 3d object constructor.
-        */
-        protected var ini:Init;
-        
-        /**
-        * Renders the shader to the specified face.
-        * 
-        * @param	face	The face object being rendered.
-        */
-        protected function renderShader(tri:DrawTriangle):void
-        {
-        	throw new Error("Not implemented");
-        }
-        
-    	/**
-    	 * Determines if the shader bitmap is smoothed (bilinearly filtered) when drawn to screen
-    	 */
-        public var smooth:Boolean;
-        
-        /**
-        * Determines if faces with the shader applied are drawn with outlines
-        */
-        public var debug:Boolean;
-        
-        /**
-        * Defines a blendMode value for the shader bitmap.
-        */
-        public var blendMode:String;
-        
-		/**
-		 * @inheritDoc
-		 */
-        public function get visible():Boolean
-        {
-            return true;
-        }
-        
-		/**
-		 * @inheritDoc
-		 */
-        public function get id():int
-        {
-            return _id;
-        }
-        
-		/**
-		 * Creates a new <code>AbstractShader</code> object.
-		 * 
-		 * @param	init	[optional]	An initialisation object for specifying default instance properties.
-		 */
-        public function AbstractShader(init:Object = null)
-        {
-            ini = Init.parse(init);
-            
-            smooth = ini.getBoolean("smooth", false);
-            debug = ini.getBoolean("debug", false);
-            blendMode = ini.getString("blendMode", BlendMode.NORMAL);
-            
-            //_id = 
-        }
-        
-		/**
-		 * @inheritDoc
-		 */
-		public function updateMaterial(source:Object3D, view:View3D):void
-        {
-        	throw new Error("Not implemented");
-        }
-        
-		/**
-		 * @inheritDoc
-		 */
-        public function renderLayer(tri:DrawTriangle, layer:Sprite, level:int):int
+        /** @private */
+        arcane override function renderLayer(tri:DrawTriangle, layer:Sprite, level:int):int
         {
         	_source = tri.source as Mesh;
         	_session = _source.session;
@@ -204,10 +114,8 @@ package away3d.materials.shaders
 			return level;
         }
         
-		/**
-		 * @inheritDoc
-		 */
-        public function renderBitmapLayer(tri:DrawTriangle, containerRect:Rectangle, parentFaceMaterialVO:FaceMaterialVO):FaceMaterialVO
+		/** @private */
+        arcane override function renderBitmapLayer(tri:DrawTriangle, containerRect:Rectangle, parentFaceMaterialVO:FaceMaterialVO):FaceMaterialVO
         {
         	_source = tri.source as Mesh;
         	_session = _source.session;
@@ -232,7 +140,7 @@ package away3d.materials.shaders
 				parentFaceMaterialVO.updated = false;
 				
 				//retrieve the bitmapRect
-				_bitmapRect = _faceVO.bitmapRect;
+				_bitmapRect = _faceVO.face.bitmapRect;
 				
 				//reset booleans
 				if (_faceMaterialVO.invalidated)
@@ -249,33 +157,83 @@ package away3d.materials.shaders
 			
 			return _faceMaterialVO;
         }
-        
-		/**
-		 * @inheritDoc
-		 */
-        public function getFaceMaterialVO(faceVO:FaceVO, source:Object3D = null, view:View3D = null):FaceMaterialVO
+		/** @private */
+        arcane function getFaceMaterialVO(faceVO:FaceVO, source:Object3D = null, view:View3D = null):FaceMaterialVO
         {
         	source;view;//TODO : FDT Warning
         	if ((_faceMaterialVO = _faceDictionary[faceVO]))
         		return _faceMaterialVO;
         	
-        	return _faceDictionary[faceVO] = new FaceMaterialVO();
+        	return _faceDictionary[faceVO] = new FaceMaterialVO(source, view);
         }
         
-		/**
-		 * @inheritDoc
-		 */
-        public function addOnMaterialUpdate(listener:Function):void
+        /**
+        * Renders the shader to the specified face.
+        * 
+        * @param	face	The face object being rendered.
+        */
+        protected function renderShader(tri:DrawTriangle):void
         {
-        	addEventListener(MaterialEvent.MATERIAL_UPDATED, listener, false, 0, true);
+        	throw new Error("Not implemented");
         }
         
-		/**
-		 * @inheritDoc
-		 */
-        public function removeOnMaterialUpdate(listener:Function):void
+        protected function calcMapping(tri:DrawTriangle, map:Matrix):Matrix
         {
-        	removeEventListener(MaterialEvent.MATERIAL_UPDATED, listener, false);
+        	tri; map;
+        	
+        	map.a = 1;
+			map.b = 0;
+			map.c = 0;
+			map.d = 1;
+			map.tx = 0;
+			map.ty = 0;
+            map.invert();
+            
+            return map;
+        }
+        
+        /**
+        * Calculates the mapping matrix required to draw the triangle texture to screen.
+        * 
+        * @param	tri		The data object holding all information about the triangle to be drawn.
+        * @return			The required matrix object.
+        */
+		protected function getMapping(tri:DrawTriangle):Matrix
+		{
+			//if (tri.generated)
+				return calcMapping(tri, _map);
+			
+			_faceMaterialVO = getFaceMaterialVO(tri.faceVO, tri.source, tri.view);
+			
+			if (!_faceMaterialVO.invalidated)
+				return _faceMaterialVO.texturemapping;
+			
+			_faceMaterialVO.invalidated = false;
+			
+			return calcMapping(tri, _faceMaterialVO.texturemapping);
+		}
+		
+    	/**
+    	 * Determines if the shader bitmap is smoothed (bilinearly filtered) when drawn to screen
+    	 */
+        public var smooth:Boolean;
+        
+        /**
+        * Defines a blendMode value for the shader bitmap.
+        */
+        public var blendMode:String;
+        
+		/**
+		 * Creates a new <code>AbstractShader</code> object.
+		 * 
+		 * @param	init	[optional]	An initialisation object for specifying default instance properties.
+		 */
+        public function AbstractShader(init:Object = null)
+        {
+            super(init);
+            
+            smooth = ini.getBoolean("smooth", false);
+            blendMode = ini.getString("blendMode", BlendMode.NORMAL);
         }
     }
 }

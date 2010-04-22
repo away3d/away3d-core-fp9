@@ -1,6 +1,6 @@
 package away3d.core.draw
 {
-    import away3d.core.base.*;
+    import away3d.core.geom.*;
 
     /**
     * representation of a 3d vertex resolved to the view.
@@ -15,8 +15,6 @@ package away3d.core.draw
 		private var my2:Number;
 		private var dx:Number;
 		private var dy:Number;
-
-		public var vectorInstructionType:String = VectorInstructionType.LINE;
 		
     	/**
     	 * The view x position of the vertex in the view.
@@ -47,6 +45,8 @@ package away3d.core.draw
         * Indicates whether the vertex is visible after projection.
         */
         public var visible:Boolean;
+    	
+    	public var viewTimer:int;
     	
 		/**
 		 * Creates a new <code>PrimitiveQuadrantTreeNode</code> object.

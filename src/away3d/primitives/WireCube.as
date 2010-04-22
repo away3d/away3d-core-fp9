@@ -13,7 +13,7 @@
     	private var _width:Number;
     	private var _height:Number;
     	private var _depth:Number;
-    	    	private var _v000:Vertex;
+    	private var _v000:Vertex;
         private var _v001:Vertex;
         private var _v010:Vertex;
         private var _v011:Vertex;

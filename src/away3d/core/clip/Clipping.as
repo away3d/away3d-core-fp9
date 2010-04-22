@@ -299,7 +299,7 @@ package away3d.core.clip
         	
 			_stage = container.stage;
 			
-			if (_stage) {
+        	if (_stage) {
 	        	if (_stage.scaleMode == StageScaleMode.NO_SCALE) {
 	        		_stageWidth = _stage.stageWidth;
 	        		_stageHeight = _stage.stageHeight;

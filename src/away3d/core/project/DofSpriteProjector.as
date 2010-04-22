@@ -1,5 +1,6 @@
 package away3d.core.project
 {
+	import away3d.arcane;
 	import away3d.cameras.lenses.*;
 	import away3d.containers.*;
 	import away3d.core.base.*;
@@ -8,7 +9,7 @@ package away3d.core.project
 	import away3d.core.utils.*;
 	import away3d.sprites.*;
 	
-	import flash.utils.*;
+	use namespace arcane;
 	
 	public class DofSpriteProjector implements IPrimitiveProvider
 	{
@@ -16,7 +17,7 @@ package away3d.core.project
 		private var _drawPrimitiveStore:DrawPrimitiveStore;
 		private var _screenVertices:Array;
 		private var _dofsprite:DofSprite2D;
-		private var _lens:ILens;
+		private var _lens:AbstractLens;
 		private var _dofcache:DofCache;
 		private var _screenZ:Number;
 		

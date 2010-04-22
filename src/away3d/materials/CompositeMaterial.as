@@ -1,233 +1,77 @@
 package away3d.materials
 {
 	import away3d.arcane;
+	import away3d.cameras.lenses.*;
 	import away3d.containers.*;
 	import away3d.core.base.*;
 	import away3d.core.draw.*;
-	import away3d.core.render.AbstractRenderSession;
 	import away3d.core.utils.*;
 	import away3d.events.*;
 	
 	import flash.display.*;
-	import flash.events.*;
 	import flash.geom.*;
 	import flash.utils.*;
 	
 	use namespace arcane;
 	
 	/**
-	 * Container for layering multiple material objects.
-	 * Renders each material by drawing one triangle per meterial layer.
-	 * For static bitmap materials, use <code>BitmapMaterialContainer</code>.
+	 * Container for caching multiple bitmapmaterial objects.
+	 * Renders each material by caching a bitmapData surface object for each face.
+	 * For continually updating materials, use <code>CompositeMaterial</code>.
 	 * 
-	 * @see away3d.materials.BitmapMaterialContainer
+	 * @see away3d.materials.CompositeMaterial
 	 */
-	public class CompositeMaterial extends EventDispatcher implements ITriangleMaterial, ILayerMaterial
+	public class CompositeMaterial extends BitmapMaterial
 	{
 		/** @private */
-        arcane var _id:int;
-        /** @private */
-		arcane var _color:uint;
-        /** @private */
-        arcane var _alpha:Number;
-        /** @private */
-		arcane var _colorTransform:ColorTransform = new ColorTransform();
-        /** @private */
-    	arcane var _colorTransformDirty:Boolean;
-        /** @private */
         arcane var _source:Object3D;
         /** @private */
-        arcane var _session:AbstractRenderSession;
-		
-		private var _defaultColorTransform:ColorTransform = new ColorTransform();
-		private var _red:Number;
-		private var _green:Number;
-		private var _blue:Number;
-        
-        private function onMaterialUpdate(event:MaterialEvent):void
+        arcane override function updateMaterial(source:Object3D, view:View3D):void
         {
-        	dispatchEvent(event);
-        }
-        
-		/**
-		 * An array of bitmapmaterial objects to be overlayed sequentially.
-		 */
-		protected var materials:Array;
-		
-        /**
-        * Instance of the Init object used to hold and parse default property values
-        * specified by the initialiser object in the 3d object constructor.
-        */
-        protected var ini:Init;
-        
-    	/**
-    	 * Updates the colortransform object applied to the texture from the <code>color</code> and <code>alpha</code> properties.
-    	 * 
-    	 * @see color
-    	 * @see alpha
-    	 */
-        protected function setColorTransform():void
-        {
-        	_colorTransformDirty = false;
-        	
-            if (_alpha == 1 && _color == 0xFFFFFF) {
-                _colorTransform = null;
-                return;
-            } else if (!_colorTransform)
-            	_colorTransform = new ColorTransform();
-            
-			_colorTransform.redMultiplier = _red;
-			_colorTransform.greenMultiplier = _green;
-			_colorTransform.blueMultiplier = _blue;
-			_colorTransform.alphaMultiplier = _alpha;
-        }
-        
-        /**
-        * Defines a blendMode value for the layer container.
-        */
-		public var blendMode:String;
-        
-		/**
-		 * Defines a colored tint for the layer container.
-		 */
-		public function get color():uint
-		{
-			return _color;
-		}
-        
-        public function set color(val:uint):void
-		{
-			if (_color == val)
-				return;
-			
-			_color = val;
-            _red = ((_color & 0xFF0000) >> 16)/255;
-            _green = ((_color & 0x00FF00) >> 8)/255;
-            _blue = (_color & 0x0000FF)/255;
-            
-            _colorTransformDirty = true;
-		}
-		
-        /**
-        * Defines an alpha value for the layer container.
-        */
-        public function get alpha():Number
-        {
-            return _alpha;
-        }
-        
-		public function set alpha(value:Number):void
-        {
-            if (value > 1)
-                value = 1;
-
-            if (value < 0)
-                value = 0;
-
-            if (_alpha == value)
-                return;
-
-            _alpha = value;
-
-            _colorTransformDirty = true;
-        }
-        
-		/**
-		 * @inheritDoc
-		 */
-        public function get visible():Boolean
-        {
-            return true;
-        }
-        
-		/**
-		 * @inheritDoc
-		 */
-        public function get id():int
-        {
-            return _id;
-        }
-        
-		/**
-		 * Creates a new <code>CompositeMaterial</code> object.
-		 * 
-		 * @param	init	[optional]	An initialisation object for specifying default instance properties.
-		 */
-		public function CompositeMaterial(init:Object = null)
-		{
-            ini = Init.parse(init);
-            
-			materials = ini.getArray("materials");
-			blendMode = ini.getString("blendMode", BlendMode.NORMAL);
-			alpha = ini.getNumber("alpha", 1, {min:0, max:1});
-            color = ini.getColor("color", 0xFFFFFF);
-            
-            for each (var _material:ILayerMaterial in materials)
-            	_material.addOnMaterialUpdate(onMaterialUpdate);
-            
-            _colorTransformDirty = true;
-		}
-        
-        public function addMaterial(material:ILayerMaterial):void
-        {
-        	material.addOnMaterialUpdate(onMaterialUpdate);
-        	materials.push(material);
-        }
-        
-        public function removeMaterial(material:ILayerMaterial):void
-        {
-        	var index:int = materials.indexOf(material);
-        	
-        	if (index == -1)
-        		return;
-        	
-        	material.removeOnMaterialUpdate(onMaterialUpdate);
-        	
-        	materials.splice(index, 1);
-        }
-        
-		/**
-		 * @inheritDoc
-		 */
-        public function updateMaterial(source:Object3D, view:View3D):void
-        {
-        	if (_colorTransformDirty)
-        		setColorTransform();
-        	
-        	for each (var _material:ILayerMaterial in materials)
+        	for each (var _material:LayerMaterial in materials)
         		_material.updateMaterial(source, view);
+        	
+        	if (_colorTransformDirty)
+        		updateColorTransform();
+        	
+        	if (_bitmapDirty)
+        		updateRenderBitmap();
+        	
+        	if (_materialDirty || _blendModeDirty)
+        		updateFaces();
+        	
+        	_blendModeDirty = false;
         }
-        
-		/**
-		 * @inheritDoc
-		 */
-		public function renderTriangle(tri:DrawTriangle):void
+        /** @private */
+        arcane override function renderTriangle(tri:DrawTriangle):void
         {
-        	_source = tri.source;
-        	_session = _source.session;
-    		var level:int = 0;
-    		
-    		var _sprite:Sprite = _session.layer as Sprite;
-    		
-        	if (!_sprite || this != _session._material || _colorTransform || blendMode != BlendMode.NORMAL) {
-        		_sprite = _session.getSprite(this, level++);
-        		_sprite.blendMode = blendMode;
+        	if (_surfaceCache) {
+        		super.renderTriangle(tri);
+        	} else {
+	        	_source = tri.source;
+	        	_session = _source.session;
+	    		var level:int = 0;
+	    		
+	    		var _sprite:Sprite = _session.layer as Sprite;
+	    		
+	        	if (!_sprite || this != _session._material || _colorTransform || blendMode != BlendMode.NORMAL) {
+	        		_sprite = _session.getSprite(this, level++);
+	        		_sprite.blendMode = blendMode;
+	        	}
+	    		
+	    		if (_colorTransform)
+	    			_sprite.transform.colorTransform = _colorTransform;
+	    		else
+	    			_sprite.transform.colorTransform = _defaultColorTransform;
+		        
+	    		//call renderLayer on each material
+	    		for each (var _material:LayerMaterial in materials)
+	        		level = _material.renderLayer(tri, _sprite, level);
         	}
-    		
-    		if (_colorTransform)
-    			_sprite.transform.colorTransform = _colorTransform;
-    		else
-    			_sprite.transform.colorTransform = _defaultColorTransform;
-	        
-    		//call renderLayer on each material
-    		for each (var _material:ILayerMaterial in materials)
-        		level = _material.renderLayer(tri, _sprite, level);
         }
         
-		/**
-		 * @inheritDoc
-		 */
-        public function renderLayer(tri:DrawTriangle, layer:Sprite, level:int):int
+		/** @private */
+        arcane override function renderLayer(tri:DrawTriangle, layer:Sprite, level:int):int
         {
         	var _sprite:Sprite;
         	if (!_colorTransform && blendMode == BlendMode.NORMAL) {
@@ -247,34 +91,230 @@ package away3d.materials
         	}
     		
 	    	//call renderLayer on each material
-    		for each (var _material:ILayerMaterial in materials)
+    		for each (var _material:LayerMaterial in materials)
         		level = _material.renderLayer(tri, _sprite, level);
         	
         	return level;
         }
         
-		/**
-		 * @private
-		 */
-        public function renderBitmapLayer(tri:DrawTriangle, containerRect:Rectangle, parentFaceMaterialVO:FaceMaterialVO):FaceMaterialVO
+		/** @private */
+        arcane override function renderBitmapLayer(tri:DrawTriangle, containerRect:Rectangle, parentFaceMaterialVO:FaceMaterialVO):FaceMaterialVO
 		{
-			throw new Error("Not implemented");
+			_faceMaterialVO = getFaceMaterialVO(tri.faceVO);
+			
+			//get width and height values
+			_faceWidth = tri.faceVO.face.bitmapRect.width;
+    		_faceHeight = tri.faceVO.face.bitmapRect.height;
+
+			//check to see if bitmapContainer exists
+			if (!(_containerVO = _containerDictionary[tri]))
+				_containerVO = _containerDictionary[tri] = new FaceMaterialVO();
+			
+			//resize container
+			if (parentFaceMaterialVO.resized) {
+				parentFaceMaterialVO.resized = false;
+				_containerVO.resize(_faceWidth, _faceHeight, transparent);
+			}
+			
+			//pass on invtexturemapping value
+			_faceMaterialVO.invtexturemapping = _containerVO.invtexturemapping = parentFaceMaterialVO.invtexturemapping;
+			
+			//call renderFace on each material
+    		for each (var _material:LayerMaterial in materials)
+        		_containerVO = _material.renderBitmapLayer(tri, containerRect, _containerVO);
+			
+			//check to see if face update can be skipped
+			if (parentFaceMaterialVO.updated || _containerVO.updated) {
+				parentFaceMaterialVO.updated = false;
+				_containerVO.updated = false;
+				
+				//reset booleans
+				_faceMaterialVO.invalidated = false;
+				_faceMaterialVO.cleared = false;
+				_faceMaterialVO.updated = true;
+        		
+				//store a clone
+				_faceMaterialVO.bitmap = parentFaceMaterialVO.bitmap.clone();
+				_faceMaterialVO.bitmap.lock();
+				
+				_sourceVO = _faceMaterialVO;
+	        	
+	        	//draw into faceBitmap
+	        	if (_blendMode == BlendMode.NORMAL && !_colorTransform)
+	        		_faceMaterialVO.bitmap.copyPixels(_containerVO.bitmap, _containerVO.bitmap.rect, _zeroPoint, null, null, true);
+	        	else
+					_faceMaterialVO.bitmap.draw(_containerVO.bitmap, null, _colorTransform, _blendMode);
+	  		}
+	  		
+	  		return _faceMaterialVO;        	
 		}
+        private var _defaultColorTransform:ColorTransform = new ColorTransform();
+		private var _width:Number;
+		private var _height:Number;
+		private var _surfaceCache:Boolean;
+		private var _fMaterialVO:FaceMaterialVO;
+		private var _containerDictionary:Dictionary = new Dictionary(true);
+		private var _cacheDictionary:Dictionary = new Dictionary(true);
+		private var _containerVO:FaceMaterialVO;
+		private var _faceWidth:int;
+		private var _faceHeight:int;
+		private var _faceVO:FaceVO;
+		
+        private function onMaterialUpdate(event:MaterialEvent):void
+        {
+        	_materialDirty = true;
+        }
+        
+		/**
+		 * An array of bitmapmaterial objects to be overlayed sequentially.
+		 */
+		protected var materials:Array;
         
 		/**
 		 * @inheritDoc
 		 */
-        public function addOnMaterialUpdate(listener:Function):void
+		protected override function updateRenderBitmap():void
         {
-        	addEventListener(MaterialEvent.MATERIAL_UPDATED, listener, false, 0, true);
+        	_bitmapDirty = false;
+        	
+        	invalidateFaces();
+        	
+        	_materialDirty = true;
         }
         
 		/**
 		 * @inheritDoc
 		 */
-        public function removeOnMaterialUpdate(listener:Function):void
-        {
-        	removeEventListener(MaterialEvent.MATERIAL_UPDATED, listener, false);
+		protected override function getMapping(tri:DrawTriangle):Matrix
+		{
+			_faceVO = tri.faceVO.face.faceVO;
+			
+			if (_view.camera.lens is ZoomFocusLens)
+        		_focus = tri.view.camera.focus;
+        	else
+        		_focus = 0;
+			
+			_faceMaterialVO = getFaceMaterialVO(_faceVO, tri.source, tri.view);
+			
+    		if (_faceMaterialVO.invalidated || _faceMaterialVO.updated) {
+	    		_faceMaterialVO.updated = true;
+	    		_faceMaterialVO.cleared = false;
+	    		
+	        	//check to see if face drawtriangle needs updating
+	        	if (_faceMaterialVO.invalidated) {
+	        		_faceMaterialVO.invalidated = false;
+	        		
+	        		//update face bitmapRect
+	        		_faceVO.face.bitmapRect = new Rectangle(int(_width*_faceVO.minU), int(_height*(1 - _faceVO.maxV)), _faceWidth = int(_width*(_faceVO.maxU-_faceVO.minU)+2), _faceHeight = int(_height*(_faceVO.maxV-_faceVO.minV)+2));
+	        		
+					//update texturemapping
+					_faceMaterialVO.invtexturemapping = tri.transformUV(this).clone();
+					_faceMaterialVO.texturemapping = _faceMaterialVO.invtexturemapping.clone();
+					_faceMaterialVO.texturemapping.invert();
+					
+	        		//resize bitmapData for container
+	        		_faceMaterialVO.resize(_faceWidth, _faceHeight, transparent);
+	        	}
+        		
+        		_fMaterialVO = _faceMaterialVO;
+        		
+	    		//call renderFace on each material
+	    		for each (var _material:LayerMaterial in materials)
+	        		_fMaterialVO = _material.renderBitmapLayer(tri, _bitmapRect, _fMaterialVO);
+        		
+        		_cacheDictionary[_faceVO] = _fMaterialVO.bitmap;
+	        	
+	        	_fMaterialVO.updated = false;
+			}
+        	
+        	_renderBitmap = _cacheDictionary[_faceVO];
+        	
+        	//check to see if tri is generated
+        	if (tri.generated) {
+        		
+        		//update texturemapping
+				_texturemapping = tri.transformUV(this).clone();
+				_texturemapping.invert();
+				
+				return _texturemapping;
+        	}
+			
+    		return _faceMaterialVO.texturemapping;
         }
+		
+		/**
+		 * Defines whether the caching bitmapData objects are transparent
+		 */
+		public var transparent:Boolean;
+		
+    	public function get surfaceCache():Boolean
+        {
+        	return _surfaceCache;
+        }
+        
+        public function set surfaceCache(val:Boolean):void
+        {
+        	_surfaceCache = val;
+        	
+        	_materialDirty = true;
+        }
+        
+		/**
+		 * Creates a new <code>BitmapMaterialContainer</code> object.
+		 * 
+		 * @param	width				The containing width of the texture, applied to all child materials.
+		 * @param	height				The containing height of the texture, applied to all child materials.
+		 * @param	init	[optional]	An initialisation object for specifying default instance properties.
+		 */
+		public function CompositeMaterial(init:Object = null)
+		{
+            ini = Init.parse(init);
+			
+			_width = ini.getNumber("width", 128);
+			_height = ini.getNumber("height", 128);
+			
+			super(new BitmapData(_width, _height, true, 0x00FFFFFF), ini);
+			
+			materials = ini.getArray("materials");
+			
+			_bitmapRect = new Rectangle(0, 0, _width, _height);
+            
+            for each (var _material:LayerMaterial in materials)
+            	_material.addOnMaterialUpdate(onMaterialUpdate);
+			
+			transparent = ini.getBoolean("transparent", true);
+			_surfaceCache = ini.getBoolean("surfaceCache", false);
+		}
+		        
+        public function addMaterial(material:LayerMaterial):void
+        {
+        	material.addOnMaterialUpdate(onMaterialUpdate);
+        	materials.push(material);
+        	
+        	_materialDirty = true;
+        }
+        
+        public function removeMaterial(material:LayerMaterial):void
+        {
+        	var index:int = materials.indexOf(material);
+        	
+        	if (index == -1)
+        		return;
+        	
+        	material.removeOnMaterialUpdate(onMaterialUpdate);
+        	
+        	materials.splice(index, 1);
+        	
+        	_materialDirty = true;
+        }
+        
+        public function clearMaterials():void
+        {
+        	var i:int = materials.length;
+        	
+        	while (i--)
+        		removeMaterial(materials[i]);
+        }
+		
 	}
 }

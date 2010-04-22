@@ -642,7 +642,7 @@ package away3d.core.math
         public function inverse(m:Matrix3D):void
         {
             d = m.det;
-            if (Math.abs(d) < 0.001) {
+            if (Math.abs(d) < 0.00001) {
                 // Determinant zero, there's no inverse
                 return;
             }

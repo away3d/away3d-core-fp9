@@ -2,8 +2,10 @@ package away3d.primitives
 {
 	import away3d.arcane;
 	import away3d.core.base.*;
+	import away3d.materials.ColorMaterial;
 	
-	import wumedia.parsers.swf.DefineFont;
+	import flash.geom.Rectangle;
+	
 	import wumedia.vector.VectorText;
 	
 	use namespace arcane;
@@ -13,9 +15,9 @@ package away3d.primitives
 		private var _font:String;
 		private var _size:Number;
 		private var _leading:Number;
-		private var _kerning:Number;
+		private var _letterSpacing:Number;
 		private var _text:String;
-		private var _textWidth:Number;
+		private var _width:Number;
 		private var _align:String;
 		private var _face:Face;
 		
@@ -27,7 +29,7 @@ package away3d.primitives
     		super.buildPrimitive();
     		
 			geometry.graphics.clear();
-			VectorText.write(geometry.graphics, _font, _size, _leading, _kerning, _text, 0, 0, _textWidth, _align, false);
+			VectorText.write(geometry.graphics, _font, _size, _leading, _letterSpacing, _text, 0, 0, _width, _align, false);
 			
 			//clear the materials on the shapes
 			for each (_face in geometry.faces)
@@ -71,17 +73,17 @@ package away3d.primitives
 		/**
     	 * Defines the amount of horizontal padding between characters. Defaults to 0.
     	 */
-		public function get kerning():Number
+		public function get letterSpacing():Number
 		{
-			return _kerning;
+			return _letterSpacing;
 		}
 		
-		public function set kerning(val:Number):void
+		public function set letterSpacing(val:Number):void
 		{
-			if (_kerning == val)
+			if (_letterSpacing == val)
     			return;
     		
-			_kerning = val;
+			_letterSpacing = val;
 			_primitiveDirty = true;
 		}
 				
@@ -105,17 +107,17 @@ package away3d.primitives
 		/**
     	 * Defines the fixed width of the textfield.
     	 */
-		public function get textWidth():Number
+		public function get width():Number
 		{
-			return _textWidth;
+			return _width;
 		}
 		
-		public function set textWidth(val:Number):void
+		public function set width(val:Number):void
 		{
-			if (_textWidth == val)
+			if (_width == val)
     			return;
     		
-			_textWidth = val;
+			_width = val;
 			_primitiveDirty = true;
 		}
 				
@@ -136,6 +138,32 @@ package away3d.primitives
 			_primitiveDirty = true;
 		}
     	
+    	/**
+    	 * Adds a hit box wrapping the text that captures mouse events near the text.
+    	 * @param paddingWidth Number Adds specified amount of pixels on the hitbox to the left and right of the text. 
+    	 * @param paddingHeight Number Adds specified amount of pixels on the hitbox to the top and bottom of the text. 
+    	 * @param debug Boolean If using the default color material, makes the hit box visible for debugging.
+    	 * @param colorMaterial ColorMaterial Allows to use a custom material for the hit box. The main idea is to avoid having multiple materials if a lot
+    	 * of TextField3D instances are used.
+    	 * @return Face A reference to the face representing the hit box.
+    	 */    	
+    	public function addHitBox(paddingWidth:Number = 0, paddingHeight:Number = 0, debug:Boolean = false, colorMaterial:ColorMaterial = null):Face
+		{
+			var bounds:Rectangle = new Rectangle(minX, minY, maxX - minX, maxY - minY);
+			bounds.inflate(paddingWidth, paddingHeight);
+			
+			var hit:Face = new Face();
+			hit.moveTo(bounds.left, bounds.top, 0);
+			hit.lineTo(bounds.right, bounds.top, 0); 
+			hit.lineTo(bounds.right, bounds.bottom, 0); 
+			hit.lineTo(bounds.left, bounds.bottom, 0); 
+			hit.lineTo(bounds.left, bounds.top, 0); 
+			hit.material = colorMaterial ? colorMaterial : new ColorMaterial(0x3399CC, {alpha: debug ? .2 : .001}); 
+			addFace(hit);
+			
+			return hit;
+		}
+    	
 		/**
 		 * Creates a new <code>TextField3D</code> object.
 		 *
@@ -150,9 +178,9 @@ package away3d.primitives
 			
 			_size = ini.getNumber("size", 20);
 			_leading = ini.getNumber("leading", 20);
-			_kerning = ini.getNumber("kerning", 0);
+			_letterSpacing = ini.getNumber("letterSpacing", 0);
 			_text = ini.getString("text", "");
-			_textWidth = ini.getNumber("textWidth", 500);
+			_width = ini.getNumber("width", 500);
 			_align = ini.getString("align", "TL");
 			
 			_primitiveDirty = true;
@@ -161,7 +189,6 @@ package away3d.primitives
 			
 			type = "TextField3D";
         	url = "primitive";
-        	
 		}
 	}
 }

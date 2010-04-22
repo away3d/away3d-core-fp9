@@ -100,9 +100,9 @@ package away3d.overlays
 			_projectionVersor = _projectionVector;
 			_projectionVersor.normalize();
 						
+			var ctVal:Number;
 			if(useBurning && _burnClip)
 			{
-				var ctVal:Number;
 				if(_burnMethod == LensFlare.BURN_METHOD_BRIGHTNESS)
 				{
 					var bsVal:Number = 5*burnFactor/_projectionLength;

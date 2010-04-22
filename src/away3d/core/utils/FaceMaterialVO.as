@@ -11,7 +11,7 @@ package away3d.core.utils
 		public var source:Object3D;
 		public var view:View3D;
 		public var invtexturemapping:Matrix;
-		public var texturemapping:Matrix;
+		public var texturemapping:Matrix = new Matrix();
 		
 		public var width:int;
 		public var height:int;
