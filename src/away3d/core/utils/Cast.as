@@ -350,7 +350,7 @@ package away3d.core.utils {
                         if (hash[0] == "")
                             return new WireframeMaterial(color(hash[1]));
                         else
-                           return new WireColorMaterial(color(hash[0]), {wirecolor:color(hash[1])});
+                           return new WireColorMaterial(color(hash[0]), {wireColor:color(hash[1])});
                     }
                     else
                     {
@@ -358,7 +358,7 @@ package away3d.core.utils {
                         if (hash[0] == "")
                             return new WireframeMaterial(color(line[0]), {thickness:parseFloat(line[1])});
                         else
-                            return new WireColorMaterial(color(hash[0]), {wirecolor:color(line[0]), thickness:parseFloat(line[1])});
+                            return new WireColorMaterial(color(hash[0]), {wireColor:color(line[0]), thickness:parseFloat(line[1])});
                     }
                 }
                 else
