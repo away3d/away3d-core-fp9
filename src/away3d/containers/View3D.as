@@ -209,7 +209,8 @@ package away3d.containers
                         uv = null;
                     }
                     screenZ = z;
-                    persp = camera.zoom / (1 + screenZ / camera.focus);
+                    //persp = camera.zoom / (1 + screenZ / camera.focus);
+                    persp = camera.lens.getPerspective(screenZ);
                     inv = camera.invViewMatrix;
 					
                     sceneX = screenX / persp * inv.sxx + screenY / persp * inv.sxy + screenZ * inv.sxz + inv.tx;
