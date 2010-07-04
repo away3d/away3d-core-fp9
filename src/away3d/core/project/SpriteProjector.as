@@ -44,7 +44,7 @@ package away3d.core.project
             
             _screenVertices[2] += _sprite.deltaZ;
             
-            consumer.primitive(_drawPrimitiveStore.createDrawScaledBitmap(source, _screenVertices, _sprite.smooth, _sprite.bitmap, _sprite.scaling*_view.camera.zoom / (1 + _screenVertices[2] / _view.camera.focus), _sprite.rotation));
+            consumer.primitive(_drawPrimitiveStore.createDrawScaledBitmap(source, _screenVertices, _sprite.smooth, _sprite.bitmap, _sprite.scaling*_view.camera.lens.getPerspective(_screenVertices[2]), _sprite.rotation));
 		}
 	}
 }
