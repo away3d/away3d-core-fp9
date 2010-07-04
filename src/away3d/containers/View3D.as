@@ -250,7 +250,7 @@ package away3d.containers
 			statsPanel = new Stats(this, stage.frameRate); 
 			statsOpen = false;
 			
-			stage.addEventListener(Event.RESIZE, onStageResized);
+			stage.addEventListener(Event.RESIZE, onStageResized, false, 0, true);
 		}
 		
 		private function onStageResized(event:Event):void
