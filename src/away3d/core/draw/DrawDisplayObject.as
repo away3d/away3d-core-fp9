@@ -1,6 +1,6 @@
 package away3d.core.draw
 {
-    import away3d.core.render.*;
+    import away3d.core.session.AbstractSession;
     
     import flash.display.DisplayObject;
     import flash.geom.Rectangle;
@@ -35,7 +35,7 @@ package away3d.core.draw
     	/**
     	 * A reference to the session used by the drawing primitive.
     	 */
-        public var session:AbstractRenderSession;
+        public var session:AbstractSession;
         
 		/**
 		 * @inheritDoc
@@ -49,7 +49,7 @@ package away3d.core.draw
             
             //check to see if displayobject is a session container
             var isContainer:Boolean = false;
-            for each(var s:AbstractRenderSession in session.sessions)
+            for each(var s:AbstractSession in session.sessions)
             	if (s.getContainer(view) == displayobject)
             		isContainer = true;
             

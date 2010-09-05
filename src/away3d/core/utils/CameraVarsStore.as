@@ -4,7 +4,7 @@ package away3d.core.utils
 	import away3d.core.base.*;
 	import away3d.core.geom.*;
 	import away3d.core.math.*;
-	import away3d.core.render.*;
+	import away3d.core.session.AbstractSession;
 	import away3d.materials.*;
 	
 	import flash.utils.*;
@@ -23,7 +23,7 @@ package away3d.core.utils
 		private var _object:Object;
 		private var _v:Object;
 		private var _source:Object3D;
-		private var _session:AbstractRenderSession;
+		private var _session:AbstractSession;
 		private var _vtActive:Array = [];
         private var _vtStore:Array = [];
 		private var _frActive:Array = [];
@@ -107,7 +107,7 @@ package away3d.core.utils
         	return _vertex;
         }
         
-		public function createUV(u:Number, v:Number, session:AbstractRenderSession):UV
+		public function createUV(u:Number, v:Number, session:AbstractSession):UV
         {
         	if (!(_uvArray = _uvDictionary[session]))
 				_uvArray = _uvDictionary[session] = [];
@@ -175,7 +175,7 @@ package away3d.core.utils
         	_vActive.length = 0;
         	
         	for (_object in _uvDictionary) {
-				_session = _object as AbstractRenderSession;
+				_session = _object as AbstractSession;
 				if (_session.updated) {
 					_uvArray = _uvDictionary[_session] as Array
 					_uvStore = _uvStore.concat();

@@ -1,6 +1,6 @@
 package away3d.core.utils 
 {
-	import away3d.core.render.*;
+	import away3d.core.session.AbstractSession;
 	import away3d.containers.*;
 	import away3d.core.base.*;
 	import away3d.core.draw.*;
@@ -14,7 +14,7 @@ package away3d.core.utils
 	 */
 	public class FaceNormalShader 
 	{
-		private var session:AbstractRenderSession;
+		private var session:AbstractSession;
 		private var focus:Number;
         private var zoom:Number;
         private var persp:Number;

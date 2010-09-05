@@ -3,7 +3,7 @@ package away3d.core.clip
 	import away3d.arcane;
 	import away3d.core.base.*;
 	import away3d.core.geom.*;
-	import away3d.core.render.*;
+	import away3d.core.session.AbstractSession;
 	import away3d.core.utils.*;
 	
 	import flash.utils.*;
@@ -30,7 +30,7 @@ package away3d.core.clip
     	private var _v1w:Number;
     	private var _v2w:Number;
     	private var _d:Number;
-    	private var _session:AbstractRenderSession;
+    	private var _session:AbstractSession;
     	private var _frustum:Frustum;
     	private var _processed:Dictionary;
     	private var _pass:Boolean;

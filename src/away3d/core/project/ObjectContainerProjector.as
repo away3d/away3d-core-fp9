@@ -5,7 +5,7 @@
 	import away3d.core.base.*;
 	import away3d.core.draw.*;
 	import away3d.core.math.*;
-	import away3d.core.render.SpriteRenderSession;
+	import away3d.core.session.SpriteSession;
 	import away3d.core.utils.*;
 	
 	import flash.utils.*;
@@ -36,8 +36,8 @@
         	for each (child in _container_children) {
 				if (child.ownCanvas && child.visible) {
 					
-					if (child.ownSession is SpriteRenderSession)
-						(child.ownSession as SpriteRenderSession).cacheAsBitmap = true;
+					if (child.ownSession is SpriteSession)
+						(child.ownSession as SpriteSession).cacheAsBitmap = true;
 					
 					_vx = child.screenXOffset;
 					_vy = child.screenYOffset;

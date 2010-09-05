@@ -4,7 +4,7 @@ package away3d.core.utils
 	import away3d.core.base.*;
 	import away3d.core.block.*;
 	import away3d.core.draw.*;
-	import away3d.core.render.*;
+	import away3d.core.session.AbstractSession;
 	import away3d.materials.*;
 	
 	import flash.display.*;
@@ -21,7 +21,7 @@ package away3d.core.utils
 		private var _object:Object;
 		private var _vertex:Object;
 		private var _source:Object3D;
-		private var _session:AbstractRenderSession;
+		private var _session:AbstractSession;
 		private var _sv:ScreenVertex;
 		private var _sprite:DrawSprite;
 		private var _seg:DrawSegment;
@@ -58,7 +58,7 @@ package away3d.core.utils
 		public function reset():void
 		{
 			for (_object in _dtDictionary) {
-				_session = _object as AbstractRenderSession;
+				_session = _object as AbstractSession;
 				if (_session.updated) {
 					_dtArray = _dtDictionary[_session] as Array;
 					if (_dtArray.length) {
@@ -69,7 +69,7 @@ package away3d.core.utils
 			}
 			
 			for (_object in _dsDictionary) {
-				_session = _object as AbstractRenderSession;
+				_session = _object as AbstractSession;
 				if (_session.updated) {
 					_dsArray = _dsDictionary[_session] as Array
 					if (_dsArray.length) {
@@ -80,7 +80,7 @@ package away3d.core.utils
 			}
 			
 			for (_object in _dbDictionary) {
-				_session = _object as AbstractRenderSession;
+				_session = _object as AbstractSession;
 				if (_session.updated) {
 					_dbArray = _dbDictionary[_session] as Array;
 					if (_dbArray.length) {
@@ -91,7 +91,7 @@ package away3d.core.utils
 			}
 			
 			for (_object in _cbDictionary) {
-				_session = _object as AbstractRenderSession;
+				_session = _object as AbstractSession;
 				if (_session.updated) {
 					_cbArray = _cbDictionary[_session] as Array;
 					if (_cbArray.length) {
@@ -102,7 +102,7 @@ package away3d.core.utils
 			}
 			
 			for (_object in _sbDictionary) {
-				_session = _object as AbstractRenderSession;
+				_session = _object as AbstractSession;
 				if (_session.updated) {
 					_sbArray = _sbDictionary[_session] as Array;
 					if (_sbArray.length) {
@@ -113,7 +113,7 @@ package away3d.core.utils
 			}
 			
 			for (_object in _doDictionary) {
-				_session = _object as AbstractRenderSession;
+				_session = _object as AbstractSession;
 				if (_session.updated) {
 					_doArray = _doDictionary[_session] as Array;
 					if (_doArray.length) {
@@ -270,7 +270,7 @@ package away3d.core.utils
 	        return _sbitmap;
 	    }
 	    
-	    public function createDrawDisplayObject(source:Object3D, vx:Number, vy:Number, vz:Number, session:AbstractRenderSession, displayobject:DisplayObject, generated:Boolean = false):DrawDisplayObject
+	    public function createDrawDisplayObject(source:Object3D, vx:Number, vy:Number, vz:Number, session:AbstractSession, displayobject:DisplayObject, generated:Boolean = false):DrawDisplayObject
 	    {
 	    	if (!(_doArray = _doDictionary[source.session]))
 				_doArray = _doDictionary[source.session] = [];

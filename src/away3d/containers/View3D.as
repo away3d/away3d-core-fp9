@@ -1,5 +1,8 @@
 package away3d.containers
 {
+	import away3d.core.session.SpriteSession;
+	import away3d.core.session.AbstractSession;
+	import away3d.core.session.BitmapSession;
 	import away3d.arcane;
 	import away3d.blockers.*;
 	import away3d.cameras.*;
@@ -104,7 +107,7 @@ package away3d.containers
 		private var _drawPrimitiveStore:DrawPrimitiveStore = new DrawPrimitiveStore();
 		private var _cameraVarsStore:CameraVarsStore = new CameraVarsStore();
         private var _scene:Scene3D;
-		private var _session:AbstractRenderSession;
+		private var _session:AbstractSession;
 		private var _clipping:Clipping;
 		private var _camera:Camera3D;
 		private var _renderer:IRenderer;
@@ -112,7 +115,7 @@ package away3d.containers
 		private var _mousedown:Boolean;
         private var _lastmove_mouseX:Number;
         private var _lastmove_mouseY:Number;
-		private var _internalsession:AbstractRenderSession;
+		private var _internalsession:AbstractSession;
 		private var _updatescene:ViewEvent;
 		private var _renderComplete:ViewEvent;
 		private var _updated:Boolean;
@@ -138,12 +141,12 @@ package away3d.containers
         private var _mouseIsOverView:Boolean;
         private var _overlays:Dictionary = new Dictionary();
         
-        private function checkSession(session:AbstractRenderSession):void
+        private function checkSession(session:AbstractSession):void
         {
         	
         	if (session.getContainer(this).hitTestPoint(_hitPointX, _hitPointY)) {
-	        	if (session is BitmapRenderSession) {
-	        		_container = (session as BitmapRenderSession).getBitmapContainer(this);
+	        	if (session is BitmapSession) {
+	        		_container = (session as BitmapSession).getBitmapContainer(this);
 	        		_hitPointX += _container.x;
 	        		_hitPointY += _container.y;
 	        	}
@@ -156,8 +159,8 @@ package away3d.containers
 	        	for each (session in _sessions)
 	        		checkSession(session);
 	        	
-	        	if (session is BitmapRenderSession) {
-	        		_container = (session as BitmapRenderSession).getBitmapContainer(this);
+	        	if (session is BitmapSession) {
+	        		_container = (session as BitmapSession).getBitmapContainer(this);
 	        		_hitPointX -= _container.x;
 	        		_hitPointY -= _container.y;
 	        	}
@@ -260,7 +263,7 @@ package away3d.containers
 		
 		private function onSessionUpdate(event:SessionEvent):void
 		{
-			if (event.target is BitmapRenderSession)
+			if (event.target is BitmapSession)
 				_scene.updatedSessions[event.target] = event.target;
 		}
 		
@@ -565,12 +568,12 @@ package away3d.containers
          * @see #renderer
          * @see #getContainer()
          */
-        public function get session():AbstractRenderSession
+        public function get session():AbstractSession
         {
         	return _session;
         }
     	
-        public function set session(val:AbstractRenderSession):void
+        public function set session(val:AbstractSession):void
         {
         	if (_session == val)
         		return;
@@ -637,7 +640,7 @@ package away3d.containers
 			_ini = Init.parse(init) as Init;
 			
             var stats:Boolean = _ini.getBoolean("stats", true);
-			session = _ini.getObject("session") as AbstractRenderSession || new SpriteRenderSession();
+			session = _ini.getObject("session") as AbstractSession || new SpriteSession();
             scene = _ini.getObjectOrInit("scene", Scene3D) as Scene3D || new Scene3D();
             camera = _ini.getObjectOrInit("camera", Camera3D) as Camera3D || new Camera3D({x:0, y:0, z:-1000, lookat:"center"});
 			renderer = _ini.getObject("renderer") as IRenderer || new BasicRenderer();
@@ -781,7 +784,7 @@ package away3d.containers
 	    /** 
 	     * Finds the object that is rendered under a certain view coordinate. Used for mouse click events.
 	     */
-        public function findHit(session:AbstractRenderSession, x:Number, y:Number):void
+        public function findHit(session:AbstractSession, x:Number, y:Number):void
         {
             screenX = x;
             screenY = y;
@@ -797,7 +800,7 @@ package away3d.containers
             _hitPointX = stagePoint.x;
             _hitPointY = stagePoint.y;
             
-        	if (this.session is BitmapRenderSession) {
+        	if (this.session is BitmapSession) {
         		_container = this.session.getContainer(this);
         		_hitPointX += _container.x;
         		_hitPointY += _container.y;
@@ -855,8 +858,8 @@ package away3d.containers
          */
 		public function getBitmapData():BitmapData
 		{
-			if (_session is BitmapRenderSession)
-				return (_session as BitmapRenderSession).getBitmapData(this);
+			if (_session is BitmapSession)
+				return (_session as BitmapSession).getBitmapData(this);
 			else
 				throw new Error("incorrect session object - require BitmapRenderSession");	
 		}
@@ -944,8 +947,8 @@ package away3d.containers
             
             //draw scene into view session
             if (_session.updated) {
-            	if (_scene.ownSession is SpriteRenderSession)
-					(_scene.ownSession as SpriteRenderSession).cacheAsBitmap = true;
+            	if (_scene.ownSession is SpriteSession)
+					(_scene.ownSession as SpriteSession).cacheAsBitmap = true;
             	_ddo.view = this;
 	        	_ddo.displayobject = _scene.session.getContainer(this);
 	        	_ddo.session = _session;

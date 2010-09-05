@@ -7,7 +7,7 @@ package away3d.materials.shaders
 	import away3d.core.draw.*;
 	import away3d.core.light.*;
 	import away3d.core.math.*;
-	import away3d.core.render.*;
+	import away3d.core.session.AbstractSession;
 	import away3d.core.utils.*;
 	import away3d.events.*;
 	import away3d.materials.*;
@@ -52,7 +52,7 @@ package away3d.materials.shaders
         /** @private */
 		arcane var _source:Mesh;
         /** @private */
-		arcane var _session:AbstractRenderSession;
+		arcane var _session:AbstractSession;
         /** @private */
 		arcane var _view:View3D;
         /** @private */
