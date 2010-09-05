@@ -1,20 +1,24 @@
 package away3d.core.utils 
 {
-	import away3d.core.session.AbstractSession;
+	import away3d.arcane;
 	import away3d.containers.*;
 	import away3d.core.base.*;
-	import away3d.core.draw.*;
-	import away3d.core.light.*;
 	import away3d.core.math.*;
+	import away3d.core.render.*;
+	import away3d.core.session.*;
+	import away3d.core.vos.*;
+	import away3d.lights.*;
 	
 	import flash.display.*;
+	
+	use namespace arcane;
 	
 	/**
 	 * @author robbateman
 	 */
 	public class FaceNormalShader 
 	{
-		private var session:AbstractSession;
+		private var _session:AbstractSession;
 		private var focus:Number;
         private var zoom:Number;
         private var persp:Number;
@@ -95,51 +99,55 @@ package away3d.core.utils
         private var _viewPosition:Number3D;
         private var _source:Mesh;
         private var _view:View3D;
+        private var _startIndex:uint;
+        private var _endIndex:uint;
+        private var _faceVO:FaceVO;
+        private var _screenVertices:Array;
+        private var _screenIndices:Array;
         
-		public function getTriangleShade(tri:DrawTriangle, shininess:Number):FaceNormalShaderVO
-        {
-        	session = tri.source.session;
-            focus = tri.view.camera.focus;
-            zoom = tri.view.camera.zoom;
+		public function getTriangleShade(priIndex:uint, viewSourceObject:ViewSourceObject, renderer:Renderer, shininess:Number):FaceNormalShaderVO
+        {		
+			_source = viewSourceObject.source as Mesh;
+			_view = renderer._view;
+        	_session = renderer._session;
+            focus = _view.camera.focus;
+            zoom = _view.camera.zoom;
             
-            if(tri.endIndex - tri.startIndex > 10)
-            {
-            	var indexA:uint = tri.screenIndices[0]*3;
-            	var indexB:uint = tri.screenIndices[5]*3;
-            	var indexC:uint = tri.screenIndices[9]*3;
-            	
-            	v0z = tri.screenVertices[indexA+2];
-				persp = (1 + v0z / focus)/zoom;
-	            v0x = tri.screenVertices[indexA]*persp;
-	            v0y = tri.screenVertices[indexA+1]*persp;
-				
-	            v1z = tri.screenVertices[indexB+2];
-				persp = (1 + v1z / focus)/zoom;
-	            v1x = tri.screenVertices[indexB]*persp;
-	            v1y = tri.screenVertices[indexB+1]*persp;
-				
-	            v2z = tri.screenVertices[indexC+2];
-				persp = (1 + v2z / focus)/zoom;
-	            v2x = tri.screenVertices[indexC]*persp;
-	            v2y = tri.screenVertices[indexC+1]*persp;
+            _startIndex = renderer.primitiveProperties[priIndex*9];
+        	_endIndex = renderer.primitiveProperties[priIndex*9+1];
+        	_faceVO = renderer.primitiveElements[priIndex];
+        	
+			_screenVertices = viewSourceObject.screenVertices;
+			_screenIndices = viewSourceObject.screenIndices;
+			
+			var indexA:uint;
+			var indexB:uint;
+			var indexC:uint;
+			
+            if(_endIndex - _startIndex > 10) {
+            	indexA = _screenIndices[_startIndex]*3;
+            	indexB = _screenIndices[_startIndex + 5]*3;
+            	indexC = _screenIndices[_startIndex + 9]*3;
+            } else {
+	            indexA = _screenIndices[_startIndex]*3;
+            	indexB = _screenIndices[_startIndex + 1]*3;
+            	indexC = _screenIndices[_startIndex + 2]*3;
             }
-            else
-            {
-	            v0z = tri.v0z;
-				persp = (1 + v0z / focus)/zoom;
-	            v0x = tri.v0x*persp;
-	            v0y = tri.v0y*persp;
-				
-	            v1z = tri.v1z;
-				persp = (1 + v1z / focus)/zoom;
-	            v1x = tri.v1x*persp;
-	            v1y = tri.v1y*persp;
-				
-	            v2z = tri.v2z;
-				persp = (1 + v2z / focus)/zoom;
-	            v2x = tri.v2x*persp;
-	            v2y = tri.v2y*persp;
-            }
+            
+        	v0z = _screenVertices[indexA+2];
+			persp = (1 + v0z / focus)/zoom;
+            v0x = _screenVertices[indexA]*persp;
+            v0y = _screenVertices[indexA+1]*persp;
+			
+            v1z = _screenVertices[indexB+2];
+			persp = (1 + v1z / focus)/zoom;
+            v1x = _screenVertices[indexB]*persp;
+            v1y = _screenVertices[indexB+1]*persp;
+			
+            v2z = _screenVertices[indexC+2];
+			persp = (1 + v2z / focus)/zoom;
+            v2x = _screenVertices[indexC]*persp;
+            v2y = _screenVertices[indexC+1]*persp;
             
             d1x = v1x - v0x;
             d1y = v1y - v0y;
@@ -163,28 +171,26 @@ package away3d.core.utils
             c0z = (v0z + v1z + v2z) / 3;
 			
             kar = kag = kab = kdr = kdg = kdb = ksr = ksg = ksb = 0;
+
 			
-			_source = tri.source as Mesh;
-			_view = tri.view;
+			var directional:DirectionalLight3D;
 			
-			var directional:DirectionalLight;
-			
-			var _tri_source_lightarray_directionals:Array = tri.source.lightarray.directionals;
-			for each (directional in _tri_source_lightarray_directionals)
+			var _tri_scene_directionalLights:Array = _source.scene.directionalLights;
+			for each (directional in _tri_scene_directionalLights)
             {
             	_diffuseTransform = directional.diffuseTransform[_source];
             	
-                red = directional.red;
-                green = directional.green;
-                blue = directional.blue;
+                red = directional._red;
+                green = directional._green;
+                blue = directional._blue;
 				
                 dfx = _diffuseTransform.szx;
 				dfy = _diffuseTransform.szy;
 				dfz = _diffuseTransform.szz;
                 
-                nx = tri.faceVO.face.normal.x;
-                ny = tri.faceVO.face.normal.y;
-                nz = tri.faceVO.face.normal.z;
+                nx = _faceVO.face.normal.x;
+                ny = _faceVO.face.normal.y;
+                nz = _faceVO.face.normal.z;
                 
                 amb = directional.ambient;
 				
@@ -218,16 +224,16 @@ package away3d.core.utils
                 ksb += blue * spec;
             }
             
-            var _tri_source_lightarray_points:Array = tri.source.lightarray.points;
-			var point:PointLight;
+            var _tri_scene_pointLights:Array = _source.scene.pointLights;
+			var point:PointLight3D;
 			
-            for each (point in _tri_source_lightarray_points)
+            for each (point in _tri_scene_pointLights)
             {
-                red = point.red;
-                green = point.green;
-                blue = point.blue;
+                red = point._red;
+                green = point._green;
+                blue = point._blue;
 				
-				_viewPosition = point.viewPositions[tri.view];
+				_viewPosition = point.viewPositions[_view];
 				
                 dfx = _viewPosition.x - c0x;
                 dfy = _viewPosition.y - c0y;
@@ -249,7 +255,7 @@ package away3d.core.utils
                 if (nf < 0)
                     continue;
 				
-                diff = point.diffuse * fade * nf * 250000;
+                diff = point.diffuse * point.brightness * fade * nf * 250000;
 				
                 kdr += red * diff;
                 kdg += green * diff;
@@ -263,7 +269,7 @@ package away3d.core.utils
                 rfx = dfx - 2*nf*pa;
                 rfy = dfy - 2*nf*pb;
                 
-                spec = point.specular * fade * Math.pow(rfz, shininess) * 250000;
+                spec = point.specular * point.brightness * fade * Math.pow(rfz, shininess) * 250000;
 				
                 ksr += red * spec;
                 ksg += green * spec;
@@ -272,7 +278,7 @@ package away3d.core.utils
 			
             if (draw_fall || draw_reflect || draw_normal)
             {
-                graphics = session.graphics,
+                graphics = _session.graphics,
                 cz = c0z,
                 cx = c0x * zoom / (1 + cz / focus),
                 cy = c0y * zoom / (1 + cz / focus);
@@ -292,12 +298,12 @@ package away3d.core.utils
 				
                 if (draw_fall || draw_reflect)
                 {
-                    var _tri_source_lightarray_points_new:Array = tri.source.lightarray.points;
-            		for each (point in _tri_source_lightarray_points_new)
+                    var _tri_source_scene_pointLights_new:Array = _source.scene.pointLights;
+            		for each (point in _tri_source_scene_pointLights_new)
                     {
-                        red = point.red;
-                        green = point.green;
-                        blue = point.blue;
+                        red = point._red;
+                        green = point._green;
+                        blue = point._blue;
                         sum = (red + green + blue) / 0xFF;
                         red /= sum;
                         green /= sum;

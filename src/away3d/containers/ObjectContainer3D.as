@@ -2,12 +2,12 @@
 {
     
     import away3d.arcane;
-	import away3d.animators.data.SkinController;
+	import away3d.animators.data.*;
     import away3d.core.base.*;
     import away3d.core.math.*;
     import away3d.core.project.*;
     import away3d.core.traverse.*;
-    import away3d.core.utils.Debug;
+    import away3d.core.utils.*;
     import away3d.events.*;
 	import away3d.lights.*;
     import away3d.loaders.data.*;
@@ -25,15 +25,16 @@
         {
             _children.push(child);
 			
-            child.addOnTransformChange(onChildChange);
-            child.addOnDimensionsChange(onChildChange);
+			child.addOnVisibilityUpdate(onSessionUpdate);
+			child.addOnSceneTransformChange(onSessionUpdate);
+            child.addOnPositionChange(onDimensionsChange);
+            child.addOnScaleChange(onDimensionsChange);
+            child.addOnDimensionsChange(onDimensionsChange);
 
             notifyDimensionsChange();
             
-            if (_session && !child.ownCanvas)
-            	session.internalAddOwnSession(child);
-            
-            _sessionDirty = true;
+            if (_session)	
+        		session.updateSession();
         }
 		/** @private */
         arcane function internalRemoveChild(child:Object3D):void
@@ -42,17 +43,18 @@
             if (index == -1)
                 return;
 			
-            child.removeOnTransformChange(onChildChange);
-            child.removeOnDimensionsChange(onChildChange);
+			child.removeOnVisibilityUpdate(onSessionUpdate);
+			child.removeOnSceneTransformChange(onSessionUpdate);
+            child.removeOnPositionChange(onDimensionsChange);
+            child.removeOnScaleChange(onDimensionsChange);
+            child.removeOnDimensionsChange(onDimensionsChange);
 			
             _children.splice(index, 1);
 
             notifyDimensionsChange();
             
-            if (session && !child.ownCanvas)
-            	session.internalRemoveOwnSession(child);
-            
-            _sessionDirty = true;
+            if (_session)	
+        		_session.updateSession();
         }
 		/** @private */
         arcane function incrementPolyCount(delta:int):void
@@ -64,10 +66,15 @@
         }
         
         private var _children:Array = [];
-        private var _lights:Array = [];
         private var _polyCount:int;
         
-        private function onChildChange(event:Object3DEvent):void
+        private function onSessionUpdate(event:Object3DEvent):void
+        {
+			if (event.object.ownCanvas && _session)
+        		_session.updateSession();
+        }
+        
+        private function onDimensionsChange(event:Object3DEvent):void
         {
             notifyDimensionsChange();
         }
@@ -149,15 +156,7 @@
         {
             return _children;
         }
-        
-        /**
-        * Returns the lights of the container as an array of light objects
-        */
-        public function get lights():Array
-        {
-            return _lights;
-        }
-                
+                        
         /**
          * Returns the number of elements in the container,
          * including elements in child nodes.
@@ -187,8 +186,6 @@
             		init = object;
             
             super(init);
-            
-            projectorType = ProjectorType.OBJECT_CONTAINER;
             
             for each (var child:Object3D in childarray)
                 addChild(child);
@@ -248,8 +245,6 @@
             if (light == null)
                 throw new Error("ObjectContainer3D.addLight(null)");
             
-            _lights.push(light);
-            
             light.parent = this;
         }
         
@@ -263,14 +258,9 @@
         {
             if (light == null)
                 throw new Error("ObjectContainer3D.removeLight(null)");
+            
             if (light.parent != this)
                 return;
-            
-            var index:int = _lights.indexOf(light);
-            if (index == -1)
-                return;
-            
-            _lights.splice(index, 1);
             
             light.parent = null;
         }

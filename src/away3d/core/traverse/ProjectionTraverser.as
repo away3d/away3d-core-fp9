@@ -70,7 +70,7 @@ package away3d.core.traverse
             _viewTransform.multiply(_cameraViewMatrix, node.sceneTransform);
             
             if (node is BSPTree) {
-            	BSPTree(node).update(_view.camera, _lens.getFrustum(node, _viewTransform), _cameraVarsStore);
+            	BSPTree(node).update(_camera, _lens.getFrustum(node, _viewTransform), _cameraVarsStore);
             	_cameraVarsStore.nodeClassificationDictionary[node] = Frustum.INTERSECT;
 			}
             // only check culling if not pre-culled by a scene graph
@@ -91,7 +91,6 @@ package away3d.core.traverse
 		            	_nodeClassification = _cameraVarsStore.nodeClassificationDictionary[node] = _cameraVarsStore.nodeClassificationDictionary[node.parent];
 		            }
 		            if (_nodeClassification == Frustum.OUT) {
-		            	node.updateObject();
 		            	return false;
 		            }
             	}
@@ -114,25 +113,14 @@ package away3d.core.traverse
         }
         
         public override function apply(node:Object3D):void
-        {
-            if (node.projectorType == ProjectorType.CONVEX_BLOCK)
-                _view.blockers[node] = node;
-            
+        { 
         	//add to scene meshes dictionary
-            if ((_mesh = node as Mesh)) {
-            	if (!_view.scene.meshes[node])
-            		_view.scene.meshes[node] = [];
-            	
-            	_view.scene.meshes[node].push(_view);
-            	
-            	_view.scene.geometries[_mesh.geometry] = _mesh.geometry;
-            }
+            if ((_mesh = node as Mesh))
+            	_mesh.updateMesh(_view);
         }
         
         public override function leave(node:Object3D):void
         {
-            //update object
-            node.updateObject();
         }
     }
 }

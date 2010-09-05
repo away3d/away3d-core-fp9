@@ -1,10 +1,11 @@
 package away3d.materials
 {
+	import away3d.core.vos.FaceVO;
 	import away3d.arcane;
 	import away3d.cameras.lenses.*;
 	import away3d.containers.*;
 	import away3d.core.base.*;
-	import away3d.core.draw.*;
+	import away3d.core.render.*;
 	import away3d.core.utils.*;
 	import away3d.events.*;
 	
@@ -24,7 +25,16 @@ package away3d.materials
 	public class CompositeMaterial extends BitmapMaterial
 	{
 		/** @private */
-        arcane var _source:Object3D;
+        arcane function getContainerVO(faceVO:FaceVO, source:Object3D = null, view:View3D = null):FaceMaterialVO
+        {
+        	source; view;
+        	
+        	//check to see if faceMaterialVO exists
+			if ((_containerVO = _containerDictionary[faceVO]))
+        		return _containerVO;
+        	
+        	return _containerDictionary[faceVO] = new FaceMaterialVO();
+        }
         /** @private */
         arcane override function updateMaterial(source:Object3D, view:View3D):void
         {
@@ -43,13 +53,20 @@ package away3d.materials
         	_blendModeDirty = false;
         }
         /** @private */
-        arcane override function renderTriangle(tri:DrawTriangle):void
+        arcane override function renderTriangle(priIndex:uint, viewSourceObject:ViewSourceObject, renderer:Renderer):void
         {
         	if (_surfaceCache) {
-        		super.renderTriangle(tri);
+        		super.renderTriangle(priIndex, viewSourceObject, renderer);
         	} else {
-	        	_source = tri.source;
-	        	_session = _source.session;
+	        	_source = viewSourceObject.source;
+	        	_session = renderer._session;
+	        	_faceVO = renderer.primitiveElements[priIndex];
+	        	
+				_generated = renderer.primitiveGenerated[priIndex];
+				
+				_startIndex = renderer.primitiveProperties[priIndex*9];
+				_screenVertices = viewSourceObject.screenVertices;
+				
 	    		var level:int = 0;
 	    		
 	    		var _sprite:Sprite = _session.layer as Sprite;
@@ -66,19 +83,19 @@ package away3d.materials
 		        
 	    		//call renderLayer on each material
 	    		for each (var _material:LayerMaterial in materials)
-	        		level = _material.renderLayer(tri, _sprite, level);
+	        		level = _material.renderLayer(priIndex, viewSourceObject, renderer, _sprite, level);
         	}
         }
         
 		/** @private */
-        arcane override function renderLayer(tri:DrawTriangle, layer:Sprite, level:int):int
+        arcane override function renderLayer(priIndex:uint, viewSourceObject:ViewSourceObject, renderer:Renderer, layer:Sprite, level:int):int
         {
         	var _sprite:Sprite;
         	if (!_colorTransform && blendMode == BlendMode.NORMAL) {
         		_sprite = layer;
         	} else {
-        		_source = tri.source;
-        		_session = _source.session;
+        		_source = viewSourceObject.source;
+        		_session = renderer._session;
         		
         		_sprite = _session.getSprite(this, level++, layer);
 	        	
@@ -92,23 +109,23 @@ package away3d.materials
     		
 	    	//call renderLayer on each material
     		for each (var _material:LayerMaterial in materials)
-        		level = _material.renderLayer(tri, _sprite, level);
+        		level = _material.renderLayer(priIndex, viewSourceObject, renderer, _sprite, level);
         	
         	return level;
         }
         
 		/** @private */
-        arcane override function renderBitmapLayer(tri:DrawTriangle, containerRect:Rectangle, parentFaceMaterialVO:FaceMaterialVO):FaceMaterialVO
+        arcane override function renderBitmapLayer(priIndex:uint, viewSourceObject:ViewSourceObject, renderer:Renderer, containerRect:Rectangle, parentFaceMaterialVO:FaceMaterialVO):FaceMaterialVO
 		{
-			_faceMaterialVO = getFaceMaterialVO(tri.faceVO);
+			_faceVO = renderer.primitiveElements[priIndex];
+			_faceMaterialVO = getFaceMaterialVO(_faceVO, viewSourceObject.source, renderer._view);
 			
 			//get width and height values
-			_faceWidth = tri.faceVO.face.bitmapRect.width;
-    		_faceHeight = tri.faceVO.face.bitmapRect.height;
+			_faceWidth = _faceVO.face.bitmapRect.width;
+    		_faceHeight = _faceVO.face.bitmapRect.height;
 
 			//check to see if bitmapContainer exists
-			if (!(_containerVO = _containerDictionary[tri]))
-				_containerVO = _containerDictionary[tri] = new FaceMaterialVO();
+			_containerVO = getContainerVO(_faceVO, viewSourceObject.source, renderer._view);
 			
 			//resize container
 			if (parentFaceMaterialVO.resized) {
@@ -121,7 +138,7 @@ package away3d.materials
 			
 			//call renderFace on each material
     		for each (var _material:LayerMaterial in materials)
-        		_containerVO = _material.renderBitmapLayer(tri, containerRect, _containerVO);
+        		_containerVO = _material.renderBitmapLayer(priIndex, viewSourceObject, renderer, containerRect, _containerVO);
 			
 			//check to see if face update can be skipped
 			if (parentFaceMaterialVO.updated || _containerVO.updated) {
@@ -156,10 +173,20 @@ package away3d.materials
 		private var _containerDictionary:Dictionary = new Dictionary(true);
 		private var _cacheDictionary:Dictionary = new Dictionary(true);
 		private var _containerVO:FaceMaterialVO;
+		private var _faceX:int;
+		private var _faceY:int;
 		private var _faceWidth:int;
 		private var _faceHeight:int;
-		private var _faceVO:FaceVO;
-		
+        private var _bRect:Rectangle;
+        private var _minU:Number;
+        private var _maxU:Number;
+        private var _minV:Number;
+        private var _maxV:Number;
+        private var _index:Number;
+        private var _uv:UV;
+        private var _u:Number;
+        private var _v:Number;
+        
         private function onMaterialUpdate(event:MaterialEvent):void
         {
         	_materialDirty = true;
@@ -169,6 +196,54 @@ package away3d.materials
 		 * An array of bitmapmaterial objects to be overlayed sequentially.
 		 */
 		protected var materials:Array;
+        
+        protected override function transformUV(faceVO:FaceVO):Matrix
+        {
+            
+            if (_uvs[0] == null || _uvs[1] == null || _uvs[2] == null)
+                return null;
+
+            _u0 = width * _uvs[0]._u;
+            _u1 = width * _uvs[1]._u;
+            _u2 = width * _uvs[2]._u;
+            _v0 = height * (1 - _uvs[0]._v);
+            _v1 = height * (1 - _uvs[1]._v);
+            _v2 = height * (1 - _uvs[2]._v);
+      
+            // Fix perpendicular projections
+            if ((_u0 == _u1 && _v0 == _v1) || (_u0 == _u2 && _v0 == _v2)) {
+            	if (_u0 > 0.05)
+                	_u0 -= 0.05;
+                else
+                	_u0 += 0.05;
+                	
+                if (_v0 > 0.07)           
+                	_v0 -= 0.07;
+                else
+                	_v0 += 0.07;
+            }
+    
+            if (_u2 == _u1 && _v2 == _v1) {
+            	if (_u2 > 0.04)
+                	_u2 -= 0.04;
+                else
+                	_u2 += 0.04;
+                	
+                if (_v2 > 0.06)           
+                	_v2 -= 0.06;
+                else
+                	_v2 += 0.06;
+            }
+            
+        	_invtexmapping.a = _u1 - _u0;
+        	_invtexmapping.b = _v1 - _v0;
+        	_invtexmapping.c = _u2 - _u0;
+        	_invtexmapping.d = _v2 - _v0;
+            _invtexmapping.tx = _u0 - faceVO.face.bitmapRect.x;
+            _invtexmapping.ty = _v0 - faceVO.face.bitmapRect.y;
+            
+            return _invtexmapping;
+        }
         
 		/**
 		 * @inheritDoc
@@ -185,16 +260,14 @@ package away3d.materials
 		/**
 		 * @inheritDoc
 		 */
-		protected override function getMapping(tri:DrawTriangle):Matrix
+		protected override function getMapping(priIndex:uint, viewSourceObject:ViewSourceObject, renderer:Renderer):Matrix
 		{
-			_faceVO = tri.faceVO.face.faceVO;
-			
 			if (_view.camera.lens is ZoomFocusLens)
-        		_focus = tri.view.camera.focus;
+        		_focus = _view.camera.focus;
         	else
         		_focus = 0;
 			
-			_faceMaterialVO = getFaceMaterialVO(_faceVO, tri.source, tri.view);
+			_faceMaterialVO = getFaceMaterialVO(_faceVO, _source, _view);
 			
     		if (_faceMaterialVO.invalidated || _faceMaterialVO.updated) {
 	    		_faceMaterialVO.updated = true;
@@ -204,14 +277,35 @@ package away3d.materials
 	        	if (_faceMaterialVO.invalidated) {
 	        		_faceMaterialVO.invalidated = false;
 	        		
+	        		//calculate max/min U/V
+	        		_minU = Infinity;
+	            	_maxU = -Infinity;
+	            	_minV = Infinity;
+	            	_maxV = -Infinity;
+	            	_index = _faceVO.uvs.length;
+	            	
+	            	while (_index--) {
+	            		_uv = _faceVO.uvs[_index];
+		            	//calculate bounding box
+		            	_u = _uv._u;
+		            	_v = _uv._v;
+	            		if (_minU > _u)
+	            			_minU = _u;
+	            		if (_maxU < _u)
+	            			_maxU = _u;
+	            		if (_minV > _v)
+	            			_minV = _v;
+	            		if (_maxV < _v)
+	            			_maxV = _v;
+	            	}
+            	
 	        		//update face bitmapRect
-	        		_faceVO.face.bitmapRect = new Rectangle(int(_width*_faceVO.minU), int(_height*(1 - _faceVO.maxV)), _faceWidth = int(_width*(_faceVO.maxU-_faceVO.minU)+2), _faceHeight = int(_height*(_faceVO.maxV-_faceVO.minV)+2));
+	        		_faceVO.face.bitmapRect = new Rectangle(_faceX = int(_width*_minU), _faceY = int(_height*(1 - _maxV)), _faceWidth = int(_width*(_maxU-_minU)+2), _faceHeight = int(_height*(_maxV-_minV)+2));
 	        		
-					//update texturemapping
-					_faceMaterialVO.invtexturemapping = tri.transformUV(this).clone();
-					_faceMaterialVO.texturemapping = _faceMaterialVO.invtexturemapping.clone();
-					_faceMaterialVO.texturemapping.invert();
-					
+	        		//update texturemapping
+	        		_faceMaterialVO.invtexturemapping = transformUV(_faceVO).clone();
+	        		_faceMaterialVO.texturemapping = _faceMaterialVO.invtexturemapping.clone();
+	        		_faceMaterialVO.texturemapping.invert();
 	        		//resize bitmapData for container
 	        		_faceMaterialVO.resize(_faceWidth, _faceHeight, transparent);
 	        	}
@@ -220,7 +314,7 @@ package away3d.materials
         		
 	    		//call renderFace on each material
 	    		for each (var _material:LayerMaterial in materials)
-	        		_fMaterialVO = _material.renderBitmapLayer(tri, _bitmapRect, _fMaterialVO);
+	        		_fMaterialVO = _material.renderBitmapLayer(priIndex, viewSourceObject, renderer, _bitmapRect, _fMaterialVO);
         		
         		_cacheDictionary[_faceVO] = _fMaterialVO.bitmap;
 	        	
@@ -230,13 +324,18 @@ package away3d.materials
         	_renderBitmap = _cacheDictionary[_faceVO];
         	
         	//check to see if tri is generated
-        	if (tri.generated) {
+        	if (_generated) {
+        		_bRect = _faceVO.face.bitmapRect;
+        		_faceX = _bRect.x;
+        		_faceY = _bRect.y;
+        		_faceWidth = _bRect.width;
+        		_faceHeight = _bRect.height;
         		
         		//update texturemapping
-				_texturemapping = tri.transformUV(this).clone();
+        		_texturemapping = transformUV(_faceVO).clone();
 				_texturemapping.invert();
-				
-				return _texturemapping;
+	    		
+	    		return _texturemapping;
         	}
 			
     		return _faceMaterialVO.texturemapping;
@@ -247,9 +346,6 @@ package away3d.materials
 		 */
 		public var transparent:Boolean;
 		
-		/**
-		 * Switches the rendering mode of layers from <code>Sprite</code> based to <code>Bitmap</code> based
-		 */
     	public function get surfaceCache():Boolean
         {
         	return _surfaceCache;
@@ -311,7 +407,7 @@ package away3d.materials
 		 */
 		public function CompositeMaterial(init:Object = null)
 		{
-            ini = Init.parse(init);
+			ini = Init.parse(init);
 			
 			width = ini.getNumber("width", 128);
 			height = ini.getNumber("height", 128);
@@ -319,13 +415,12 @@ package away3d.materials
 			super(_bitmap, ini);
 			
 			materials = ini.getArray("materials");
-			
             
             for each (var _material:LayerMaterial in materials)
             	_material.addOnMaterialUpdate(onMaterialUpdate);
 			
 			transparent = ini.getBoolean("transparent", true);
-			surfaceCache = ini.getBoolean("surfaceCache", false);
+			_surfaceCache = ini.getBoolean("surfaceCache", false);
 		}
 		        
         public function addMaterial(material:LayerMaterial):void

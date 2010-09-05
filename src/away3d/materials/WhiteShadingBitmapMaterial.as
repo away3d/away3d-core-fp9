@@ -1,10 +1,10 @@
 package away3d.materials
 {
-	import away3d.arcane;	import away3d.containers.*;
-	import away3d.core.base.*;
-	import away3d.core.draw.*;
-	import away3d.core.light.*;
+	import away3d.arcane;
+	import away3d.containers.*;	import away3d.core.base.*;
+	import away3d.core.render.*;
 	import away3d.core.utils.*;
+	import away3d.lights.*;
 	
 	import flash.display.*;
 	import flash.filters.*;
@@ -21,9 +21,9 @@ package away3d.materials
     	/** @private */
         arcane  override function updateMaterial(source:Object3D, view:View3D):void
         {
-        	var _source_lightarray_directionals:Array = source.lightarray.directionals;
-        	for each (var directional:DirectionalLight in _source_lightarray_directionals) {
-        		if (!directional.diffuseTransform[source] || view.scene.updatedObjects[source]) {
+        	var _source_scene_directionalLights:Array = source.scene.directionalLights;
+        	for each (var directional:DirectionalLight3D in _source_scene_directionalLights) {
+        		if (!directional.diffuseTransform[source] || view._updatedObjects[source]) {
         			directional.setDiffuseTransform(source);
         			_materialDirty = true;
         		}
@@ -31,15 +31,15 @@ package away3d.materials
         		if (!directional.specularTransform[source])
         			directional.specularTransform[source] = new Dictionary(true);
         		
-        		if (!directional.specularTransform[source][view] || view.scene.updatedObjects[source] || view.updated) {
+        		if (!directional.specularTransform[source][view] || view._updatedObjects[source] || view.updated) {
         			directional.setSpecularTransform(source, view);
         			_materialDirty = true;
         		}
         	}
         	
-        	var source_lightarray_points:Array = source.lightarray.points;
-        	for each (var point:PointLight in source_lightarray_points) {
-        		if (!point.viewPositions[view] || view.scene.updatedObjects[source] || view.updated) {
+        	var _source_scene_pointLights:Array = source.scene.pointLights;
+        	for each (var point:PointLight3D in _source_scene_pointLights) {
+        		if (!point.viewPositions[view] || view._updatedObjects[source] || view.updated) {
         			point.setViewPosition(view);
         			_materialDirty = true;
         		}
@@ -48,24 +48,34 @@ package away3d.materials
         	super.updateMaterial(source, view);
         }
     	/** @private */
-        arcane override function renderTriangle(tri:DrawTriangle):void
+        arcane override function renderTriangle(priIndex:uint, viewSourceObject:ViewSourceObject, renderer:Renderer):void
         {
-        	var shade:FaceNormalShaderVO = shader.getTriangleShade(tri, shininess);
-            br = (shade.kar + shade.kag + shade.kab + shade.kdr + shade.kdg + shade.kdb + shade.ksr + shade.ksg + shade.ksb)/3;
+        	_source = viewSourceObject.source;
+			_session = renderer._session;
+            _view = renderer._view;
+        	
+        	_startIndex = renderer.primitiveProperties[priIndex*9];
+        	_endIndex = renderer.primitiveProperties[priIndex*9+1];
+        	_faceVO = renderer.primitiveElements[priIndex];
+			_uvs = renderer.primitiveUVs[priIndex];
+			_generated = renderer.primitiveGenerated[priIndex];
+        	
+        	_screenVertices = viewSourceObject.screenVertices;
+			_screenIndices = viewSourceObject.screenIndices;
 			
-            _view = tri.view;
-			_session = tri.source.session;
+        	var shade:FaceNormalShaderVO = shader.getTriangleShade(priIndex, viewSourceObject, renderer, shininess);
+            br = (shade.kar + shade.kag + shade.kab + shade.kdr + shade.kdg + shade.kdb + shade.ksr + shade.ksg + shade.ksb)/3;
 			
 			if ((br < 1) && (blackrender || ((step < 16) && (!_bitmap.transparent))))
             {
-            	_session.renderTriangleBitmap(bitmap, getMapping(tri), tri.screenVertices, tri.screenIndices, tri.startIndex, tri.endIndex, smooth, repeat);
-                _session.renderTriangleColor(0x000000, 1 - br, tri.screenVertices, tri.screenCommands, tri.screenIndices, tri.startIndex, tri.endIndex);
+            	_session.renderTriangleBitmap(bitmap, getMapping(priIndex, viewSourceObject, renderer), viewSourceObject.screenVertices, viewSourceObject.screenIndices, _startIndex, _endIndex, smooth, repeat);
+                _session.renderTriangleColor(0x000000, 1 - br, viewSourceObject.screenVertices, renderer.primitiveCommands[priIndex], viewSourceObject.screenIndices, _startIndex, _endIndex);
             }
             else
             if ((br > 1) && (whiterender))
             {
-            	_session.renderTriangleBitmap(bitmap, getMapping(tri), tri.screenVertices, tri.screenIndices, tri.startIndex, tri.endIndex, smooth, repeat);
-                _session.renderTriangleColor(0xFFFFFF, (br - 1)*whitek, tri.screenVertices, tri.screenCommands, tri.screenIndices, tri.startIndex, tri.endIndex);
+            	_session.renderTriangleBitmap(bitmap, getMapping(priIndex, viewSourceObject, renderer), viewSourceObject.screenVertices, viewSourceObject.screenIndices, _startIndex, _endIndex, smooth, repeat);
+                _session.renderTriangleColor(0xFFFFFF, (br - 1)*whitek, viewSourceObject.screenVertices, renderer.primitiveCommands[priIndex], viewSourceObject.screenIndices, _startIndex, _endIndex);
             }
             else
             {
@@ -81,7 +91,7 @@ package away3d.materials
                 	bitmap.applyFilter(_bitmap, bitmap.rect, bitmapPoint, colorMatrix);
                     cache[brightness] = bitmap;
                 }
-                _session.renderTriangleBitmap(bitmap, getMapping(tri), tri.screenVertices, tri.screenIndices, tri.startIndex, tri.endIndex, smooth, repeat);
+                _session.renderTriangleBitmap(bitmap, getMapping(priIndex, viewSourceObject, renderer), viewSourceObject.screenVertices, viewSourceObject.screenIndices, _startIndex, _endIndex, smooth, repeat);
             }
         }
         

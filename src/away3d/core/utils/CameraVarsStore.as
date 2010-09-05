@@ -5,6 +5,7 @@ package away3d.core.utils
 	import away3d.core.geom.*;
 	import away3d.core.math.*;
 	import away3d.core.session.AbstractSession;
+	import away3d.core.vos.*;
 	import away3d.materials.*;
 	
 	import flash.utils.*;
@@ -122,7 +123,7 @@ package away3d.core.utils
         	return _uv;
         }
         
-        public function createFaceVO(face:Face, material:Material, back:Material, uv0:UV, uv1:UV, uv2:UV):FaceVO
+        public function createFaceVO(face:Face, material:Material, back:Material):FaceVO
         {
         	if (_fStore.length)
         		_fActive.push(_faceVO = _fStore.pop());
@@ -130,10 +131,8 @@ package away3d.core.utils
         		_fActive.push(_faceVO = new FaceVO());
         	
         	_faceVO.face = face;
-        	_faceVO.uv0 = uv0;
-        	_faceVO.uv1 = uv1;
-        	_faceVO.uv2 = uv2;
         	_faceVO.material = material;
+        	_faceVO.commands = ["M", "L", "L"];
         	_faceVO.back = back;
         	_faceVO.generated = true;
         	
@@ -147,6 +146,8 @@ package away3d.core.utils
         	else
         		_sActive.push(_segmentVO = new SegmentVO());
         	
+        	_segmentVO.material = material;
+        	_segmentVO.commands = ["M", "L"];
         	_segmentVO.generated = true;
         	
         	return _segmentVO;
@@ -182,7 +183,7 @@ package away3d.core.utils
 					_uvArray.length = 0;
 				}
 			}
-			
+        	
 			_fStore = _fStore.concat(_fActive);
         	_fActive.length = 0;
         	

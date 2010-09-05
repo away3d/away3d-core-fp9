@@ -1,11 +1,12 @@
 package away3d.materials
 {
+    import away3d.core.vos.FaceVO;
     import away3d.arcane;
-    import away3d.cameras.lenses.ZoomFocusLens;
+    import away3d.cameras.lenses.*;
     import away3d.containers.*;
     import away3d.core.base.*;
-    import away3d.core.draw.*;
     import away3d.core.math.*;
+	import away3d.core.render.*;
     import away3d.core.utils.*;
     
     import flash.display.*;
@@ -21,6 +22,8 @@ package away3d.materials
         /** @private */
 		arcane override function updateMaterial(source:Object3D, view:View3D):void
         {
+        	source; view;
+        	
         	_graphics = null;
         	
         	if (_colorTransformDirty)
@@ -42,22 +45,23 @@ package away3d.materials
         	_blendModeDirty = false;
         }
         /** @private */
-		arcane override function renderTriangle(tri:DrawTriangle):void
+		arcane override function renderTriangle(priIndex:uint, viewSourceObject:ViewSourceObject, renderer:Renderer):void
         {
         	if (_projectionVector && !throughProjection) {
-        		
+        		_faceVO = renderer.primitiveElements[priIndex];
+        		_source = viewSourceObject.source;
         		if (globalProjection) {
-        			normalR.rotate(tri.faceVO.face.normal, tri.source.sceneTransform);
+        			normalR.rotate(_faceVO.face.normal, _source.sceneTransform);
         			if (normalR.dot(_projectionVector) < 0)
         				return;
-        		} else if (tri.faceVO.face.normal.dot(_projectionVector) < 0)
+        		} else if (_faceVO.face.normal.dot(_projectionVector) < 0)
         			return;
         	}
         	
-			super.renderTriangle(tri);
+			super.renderTriangle(priIndex, viewSourceObject, renderer);
         }
         /** @private */
-		arcane override function renderBitmapLayer(tri:DrawTriangle, containerRect:Rectangle, parentFaceMaterialVO:FaceMaterialVO):FaceMaterialVO
+		arcane override function renderBitmapLayer(priIndex:uint, viewSourceObject:ViewSourceObject, renderer:Renderer, containerRect:Rectangle, parentFaceMaterialVO:FaceMaterialVO):FaceMaterialVO
 		{	
 			//retrieve the transform
 			if (_transform)
@@ -65,12 +69,15 @@ package away3d.materials
 			else
 				_mapping = new Matrix();
 			
+			_faceVO = renderer.primitiveElements[priIndex];
+			_source = viewSourceObject.source;
+			
 			//if not projected, draw the source bitmap once
 			if (!_projectionVector)
-				renderSource(tri.source, containerRect, _mapping);
+				renderSource(_source, containerRect, _mapping);
 			
 			//get the correct faceMaterialVO
-			_faceMaterialVO = getFaceMaterialVO(tri.faceVO.face.faceVO);
+			_faceMaterialVO = getFaceMaterialVO(_faceVO.face.faceVO);
 			
 			//pass on resize value
 			if (parentFaceMaterialVO.resized) {
@@ -86,7 +93,7 @@ package away3d.materials
 				parentFaceMaterialVO.updated = false;
 				
 				//retrieve the bitmapRect
-				_bitmapRect = tri.faceVO.face.bitmapRect;
+				_bitmapRect = _faceVO.face.bitmapRect;
 				
 				//reset booleans
 				if (_faceMaterialVO.invalidated)
@@ -102,13 +109,13 @@ package away3d.materials
 					
 					//calulate mapping
 					_invtexturemapping = _faceMaterialVO.invtexturemapping;
-					_mapping.concat(projectUV(tri));
+					_mapping.concat(projectUV(_faceVO));
 					_mapping.concat(_invtexturemapping);
 					
-					normalR.clone(tri.faceVO.face.normal);
+					normalR.clone(_faceVO.face.normal);
 					
 					if (_globalProjection)
-						normalR.rotate(normalR, tri.source.sceneTransform);
+						normalR.rotate(normalR, _source.sceneTransform);
 					
 					//check to see if the bitmap (non repeating) lies inside the drawtriangle area
 					if ((throughProjection || normalR.dot(_projectionVector) >= 0) && (repeat || !findSeparatingAxis(getFacePoints(_invtexturemapping), getMappingPoints(_mapping)))) {
@@ -158,18 +165,11 @@ package away3d.materials
         private var _transformDirty:Boolean;
         private var _throughProjection:Boolean;
         private var _globalProjection:Boolean;
-        private var faceVO:FaceVO;
         private var x:Number;
 		private var y:Number;
 		private var px:Number;
 		private var py:Number;
         private var normalR:Number3D = new Number3D();
-        private var _u0:Number;
-        private var _u1:Number;
-        private var _u2:Number;
-        private var _v0:Number;
-        private var _v1:Number;
-        private var _v2:Number;
         private var v0x:Number;
         private var v0y:Number;
         private var v0z:Number;
@@ -223,18 +223,16 @@ package away3d.materials
 	        _materialDirty = true;
         }
         
-		private function projectUV(tri:DrawTriangle):Matrix
+		private function projectUV(faceVO:FaceVO):Matrix
         {
-        	faceVO = tri.faceVO;
-        	
         	if (globalProjection) {
-	    		v0.transform(faceVO.v0.position, tri.source.sceneTransform);
-	    		v1.transform(faceVO.v1.position, tri.source.sceneTransform);
-	    		v2.transform(faceVO.v2.position, tri.source.sceneTransform);
+	    		v0.transform(faceVO.vertices[0].position, _source.sceneTransform);
+	    		v1.transform(faceVO.vertices[1].position, _source.sceneTransform);
+	    		v2.transform(faceVO.vertices[2].position, _source.sceneTransform);
         	} else {
-	    		v0 = faceVO.v0.position;
-	    		v1 = faceVO.v1.position;
-	    		v2 = faceVO.v2.position;
+	    		v0 = faceVO.vertices[0].position;
+	    		v1 = faceVO.vertices[1].position;
+	    		v2 = faceVO.vertices[2].position;
         	}
         	
         	v0x = v0.x;
@@ -285,7 +283,7 @@ package away3d.materials
             t.invert();
             return t;
         }
-		
+        
 		private function getContainerPoints(rect:Rectangle):Array
 		{
 			return [rect.topLeft, new Point(rect.top, rect.right), rect.bottomRight, new Point(rect.bottom, rect.left)];
@@ -373,17 +371,16 @@ package away3d.materials
 			return false;
 		}
 		
-		/**
-		 * @inheritDoc
-		 */
-		protected override function getMapping(tri:DrawTriangle):Matrix
+		protected override function getMapping(priIndex:uint, viewSourceObject:ViewSourceObject, renderer:Renderer):Matrix
 		{
-			if (tri.generated) {
+			priIndex; viewSourceObject; renderer;
+			
+			if (_generated) {
 		        //use projectUV if projection vector detected
-	    		if (projectionVector) {
-	    			_texturemapping = projectUV(tri);
+				if (projectionVector) {
+					_texturemapping = projectUV(_faceVO).clone();
 	    		} else {
-	    			_texturemapping = tri.transformUV(this).clone();
+	    			_texturemapping = transformUV(_faceVO).clone();
 	        		_texturemapping.invert();
 	    		}
     		
@@ -398,7 +395,7 @@ package away3d.materials
 	        	return _mapping;
 			}
 			
-        	_faceMaterialVO = getFaceMaterialVO(tri.faceVO, tri.source);
+        	_faceMaterialVO = getFaceMaterialVO(_faceVO, _source);
         	
         	//check to see if rendering can be skipped
         	if (!_faceMaterialVO.invalidated)
@@ -408,9 +405,9 @@ package away3d.materials
     		
     		//use projectUV if projection vector detected
     		if (projectionVector) {
-    			_texturemapping = projectUV(tri);
+    			_texturemapping = projectUV(_faceVO).clone();
     		} else {
-    			_texturemapping = tri.transformUV(this).clone();
+    			_texturemapping = transformUV(_faceVO).clone();
         		_texturemapping.invert();
     		}
     		

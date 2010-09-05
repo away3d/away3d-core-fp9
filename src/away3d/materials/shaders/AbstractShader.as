@@ -4,16 +4,14 @@ package away3d.materials.shaders
 	import away3d.cameras.lenses.*;
 	import away3d.containers.*;
 	import away3d.core.base.*;
-	import away3d.core.draw.*;
-	import away3d.core.light.*;
 	import away3d.core.math.*;
-	import away3d.core.session.AbstractSession;
+	import away3d.core.render.*;
+	import away3d.core.session.*;
 	import away3d.core.utils.*;
-	import away3d.events.*;
+	import away3d.core.vos.*;
 	import away3d.materials.*;
 	
 	import flash.display.*;
-	import flash.events.*;
 	import flash.geom.*;
 	import flash.utils.*;	
 	
@@ -60,8 +58,6 @@ package away3d.materials.shaders
 		/** @private */
 		arcane var _faceVO:FaceVO;
         /** @private */
-		arcane var _lights:ILightConsumer;
-        /** @private */
 		arcane var _parentFaceMaterialVO:FaceMaterialVO;
         /** @private */
 		arcane var _n0:Number3D;
@@ -72,10 +68,6 @@ package away3d.materials.shaders
         /** @private */
         arcane var _dict:Dictionary;
         /** @private */
-		arcane var ambient:AmbientLight;
-        /** @private */
-		arcane var directional:DirectionalLight;
-        /** @private */
 		arcane var _faceMaterialVO:FaceMaterialVO;
         /** @private */
 		arcane var _normal0:Number3D = new Number3D();
@@ -85,6 +77,8 @@ package away3d.materials.shaders
 		arcane var _normal2:Number3D = new Number3D();
         /** @private */
 		arcane var _map:Matrix = new Matrix();
+		/** @private */
+		arcane var _focus:Number;
 		/** @private */
 		arcane var _mapping:Matrix;
         /** @private */
@@ -102,26 +96,47 @@ package away3d.materials.shaders
             return true;
         }
         /** @private */
-        arcane override function renderLayer(tri:DrawTriangle, layer:Sprite, level:int):int
+        arcane override function renderLayer(priIndex:uint, viewSourceObject:ViewSourceObject, renderer:Renderer, layer:Sprite, level:int):int
         {
-        	_source = tri.source as Mesh;
-        	_session = _source.session;
-			_view = tri.view;
-			_faceVO = tri.faceVO;
-			_face = _faceVO.face;
-			_lights = tri.source.lightarray;
+        	layer;
+        	
+        	_source = viewSourceObject.source as Mesh;
+			_session = renderer._session;
+        	_view = renderer._view;
+			
+        	_startIndex = renderer.primitiveProperties[priIndex*9];
+        	_endIndex = renderer.primitiveProperties[priIndex*9+1];
+			_faceVO = renderer.primitiveElements[priIndex];
+			_uvs = renderer.primitiveUVs[priIndex];
+			_generated = renderer.primitiveGenerated[priIndex];
+			
+			_screenVertices = viewSourceObject.screenVertices;
+			_screenIndices = viewSourceObject.screenIndices;
+			
+        	_face = _faceVO.face;
 			
 			return level;
         }
         
 		/** @private */
-        arcane override function renderBitmapLayer(tri:DrawTriangle, containerRect:Rectangle, parentFaceMaterialVO:FaceMaterialVO):FaceMaterialVO
+        arcane override function renderBitmapLayer(priIndex:uint, viewSourceObject:ViewSourceObject, renderer:Renderer, containerRect:Rectangle, parentFaceMaterialVO:FaceMaterialVO):FaceMaterialVO
         {
-        	_source = tri.source as Mesh;
-        	_session = _source.session;
-			_view = tri.view;
-			_faceVO = tri.faceVO;
-			_face = _faceVO.face;
+        	containerRect;
+        	
+        	_source = viewSourceObject.source as Mesh;
+			_session = renderer._session;
+        	_view = renderer._view;
+			
+        	_startIndex = renderer.primitiveProperties[priIndex*9];
+        	_endIndex = renderer.primitiveProperties[priIndex*9+1];
+			_faceVO = renderer.primitiveElements[priIndex];
+			_uvs = renderer.primitiveUVs[priIndex];
+			_generated = renderer.primitiveGenerated[priIndex];
+			
+			_screenVertices = viewSourceObject.screenVertices;
+			_screenIndices = viewSourceObject.screenIndices;
+        	_face = _faceVO.face;
+        	
 			_parentFaceMaterialVO = parentFaceMaterialVO;
 			
 			_faceMaterialVO = getFaceMaterialVO(_faceVO, _source, _view);
@@ -152,7 +167,7 @@ package away3d.materials.shaders
 				_faceMaterialVO.bitmap = parentFaceMaterialVO.bitmap;
 				
 				//draw shader
-				renderShader(tri);
+				renderShader(priIndex);
 			}
 			
 			return _faceMaterialVO;
@@ -167,19 +182,26 @@ package away3d.materials.shaders
         	return _faceDictionary[faceVO] = new FaceMaterialVO(source, view);
         }
         
+        protected var _startIndex:uint;
+        protected var _endIndex:uint;
+        protected var _uvs:Array;
+        protected var _generated:Boolean;
+        protected var _screenVertices:Array;
+		protected var _screenIndices:Array;
+		
         /**
         * Renders the shader to the specified face.
         * 
-        * @param	face	The face object being rendered.
+        * @param	priIndex	The index of the primitive being rendered.
         */
-        protected function renderShader(tri:DrawTriangle):void
+        protected function renderShader(priIndex:uint):void
         {
         	throw new Error("Not implemented");
         }
         
-        protected function calcMapping(tri:DrawTriangle, map:Matrix):Matrix
+        protected function calcMapping(priIndex:uint, map:Matrix):Matrix
         {
-        	tri; map;
+        	priIndex; map;
         	
         	map.a = 1;
 			map.b = 0;
@@ -198,19 +220,19 @@ package away3d.materials.shaders
         * @param	tri		The data object holding all information about the triangle to be drawn.
         * @return			The required matrix object.
         */
-		protected function getMapping(tri:DrawTriangle):Matrix
+		protected function getMapping(priIndex:uint):Matrix
 		{
-			//if (tri.generated)
-				return calcMapping(tri, _map);
+			//if (_generated)
+				return calcMapping(priIndex, _map);
 			
-			_faceMaterialVO = getFaceMaterialVO(tri.faceVO, tri.source, tri.view);
+			_faceMaterialVO = getFaceMaterialVO(_faceVO);
 			
 			if (!_faceMaterialVO.invalidated)
 				return _faceMaterialVO.texturemapping;
 			
 			_faceMaterialVO.invalidated = false;
 			
-			return calcMapping(tri, _faceMaterialVO.texturemapping);
+			return calcMapping(priIndex, _faceMaterialVO.texturemapping);
 		}
 		
     	/**

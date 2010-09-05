@@ -10,12 +10,12 @@ package away3d.test
     public class Slide
     {
         public var scene:Scene3D;
-        public var renderer:IRenderer;
+        public var renderer:Renderer;
         public var session:AbstractSession;
         public var title:String;
         public var desc:String;
 
-        public function Slide(title:String, desc:String, scene:Scene3D, renderer:IRenderer, session:AbstractSession)
+        public function Slide(title:String, desc:String, scene:Scene3D, renderer:Renderer, session:AbstractSession)
         {
             this.scene = scene;
             this.renderer = renderer;
